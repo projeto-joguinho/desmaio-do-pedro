@@ -288,6 +288,56 @@ function beep(freqs, dur = 0.1, type = "sine", vol = 0.14) {
     });
   } catch (e) {}
 }
+/* Background soundtrack: an original loop generated live with Web Audio (no audio files).
+   Calm A-minor lab groove; it speeds up and adds hi-hats in the last 2 minutes, and gets quieter while a panel is open. */
+const music = (() => {
+  let master = null, timer = null, step = 0, nextT = 0, playing = false, tense = false, noiseBuf = null;
+  const chords = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]]; // Am F C G
+  const bass = [45, 41, 48, 43];
+  const melody = [76, 0, 72, 0, 74, 72, 69, 0, 72, 0, 69, 0, 67, 69, 72, 0, 72, 0, 76, 0, 79, 76, 74, 0, 74, 0, 71, 0, 67, 0, 0, 0];
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  function tone(type, freq, t, dur, vol) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function hat(t, vol) {
+    if (!noiseBuf) { noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.05, actx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+    s.buffer = noiseBuf; f.type = "highpass"; f.frequency.value = 7000;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + 0.05);
+  }
+  function schedule() {
+    const spb = 60 / (tense ? 118 : 92) / 2; // eighth notes
+    if (nextT < actx.currentTime - 0.2) nextT = actx.currentTime + 0.05; // tab was in background: skip, don't burst
+    while (nextT < actx.currentTime + 0.15) {
+      const bar = Math.floor(step / 8) % 4, s = step % 8, ch = chords[bar];
+      if (s === 0) { ch.forEach(m => tone("sine", mtof(m), nextT, spb * 7.6, 0.03)); tone("triangle", mtof(bass[bar]), nextT, spb * 3, 0.11); }
+      if (s === 4) tone("triangle", mtof(bass[bar]), nextT, spb * 3, 0.08);
+      tone("square", mtof(ch[s % 3] + 12), nextT, spb * 0.55, 0.01);
+      const mel = melody[step % 32];
+      if (mel && Math.floor(step / 32) % 2 === 1) tone("triangle", mtof(mel), nextT, spb * 1.6, 0.045);
+      if (tense || s % 2 === 0) hat(nextT, s % 2 ? 0.012 : 0.022);
+      nextT += spb; step++;
+    }
+  }
+  return {
+    start() {
+      if (muted || playing) return;
+      try {
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        if (actx.state === "suspended") actx.resume();
+        if (!master) { master = actx.createGain(); master.gain.value = 0.7; master.connect(actx.destination); }
+        playing = true; step = 0; nextT = actx.currentTime + 0.1; timer = setInterval(schedule, 40);
+      } catch (e) {}
+    },
+    stop() { playing = false; clearInterval(timer); },
+    setTense(v) { tense = v; },
+    duck(on) { if (master && actx) master.gain.setTargetAtTime(on ? 0.3 : 0.7, actx.currentTime, 0.3); }
+  };
+})();
 const sfx = { ok: () => beep([660, 990]), bad: () => beep([200, 150], 0.13, "square", 0.06), win: () => beep([523, 659, 784, 1047], 0.11, "triangle"), talk: () => beep([1000], 0.06), tick: () => beep([1300], 0.05, "sine", 0.05) };
 
 /* ---------------- Content ---------------- */
@@ -305,16 +355,16 @@ const PHASES = [
     summary: "A glicose é o principal combustível do corpo. Abaixo de 70 mg/dL é hipoglicemia; o Pedro estava com 48 mg/dL."
   },
   {
-    key: "nutricao", station: "Nutrição", title: "Os nutrientes dos alimentos", color: "#b9800f", pos: [-3.6, -5.6],
+    key: "nutricao", station: "Bioenergética", title: "Catabolismo e anabolismo", color: "#b9800f", pos: [-3.6, -5.6],
     paras: [
-      "Os alimentos têm três grupos de nutrientes que dão energia: carboidratos, proteínas e gorduras (também chamadas de lipídios). Quase todo alimento tem um pouco de cada, mas um deles costuma aparecer em maior quantidade.",
-      "Carboidratos (arroz, pão, macarrão, frutas, açúcar) são quebrados na digestão até virar glicose. São a fonte de energia mais rápida.",
-      "Proteínas (carnes, ovos, leite, feijão) servem principalmente para construir e consertar o corpo, como os músculos. Gorduras (óleo, azeite, manteiga) são uma reserva de energia e fazem parte das células."
+      "Bioenergética é o estudo de como os seres vivos conseguem, transformam e usam energia. A energia dos alimentos fica guardada nas ligações químicas das moléculas, como a glicose, as gorduras e as proteínas.",
+      "Metabolismo é o conjunto de todas as reações químicas do corpo, e ele tem dois lados. Catabolismo é quebrar moléculas grandes em menores, o que libera energia: digerir o amido do pão até glicose, quebrar o glicogênio do fígado, queimar glicose na respiração celular. Anabolismo é o contrário: montar moléculas grandes a partir de pequenas, o que gasta energia: guardar glicose como glicogênio, formar músculo a partir de aminoácidos, guardar gordura de reserva.",
+      "Quem liga os dois lados é o ATP: o catabolismo produz ATP e o anabolismo gasta ATP. No estado pós-prandial, com comida chegando, predomina o anabolismo (o corpo guarda). No jejum e no exercício, predomina o catabolismo (o corpo usa as reservas)."
     ],
-    refs: [["Carboidrato", "4 kcal por grama"], ["Proteína", "4 kcal por grama"], ["Gordura", "9 kcal por grama"], ["Energia mais rápida", "carboidrato"]],
-    clinical: "Em 12 horas sem comer, o Pedro não recebeu nenhum carboidrato. Sem essa entrada de glicose, o corpo teve que usar o que tinha guardado, e o exercício gastou essa reserva depressa.",
-    hint: "Em cada alimento, veja qual dos três números é o maior: C (carboidrato), P (proteína) ou G (gordura).",
-    summary: "Carboidratos viram glicose e dão energia rápida, proteínas constroem o corpo e gorduras guardam energia."
+    refs: [["Catabolismo", "quebra · libera energia"], ["Anabolismo", "constrói · gasta energia"], ["Moeda de energia", "ATP"], ["Estado pós-prandial", "predomina anabolismo"], ["Jejum e exercício", "predomina catabolismo"]],
+    clinical: "Depois de 12 horas de jejum e da Educação Física, o corpo do Pedro estava em pleno catabolismo, quebrando o glicogênio do fígado e as gorduras para manter a glicose do sangue. Só que, sem carboidrato chegando, a reserva rápida de glicose acabou antes que ele conseguisse repor.",
+    hint: "Pergunte para cada processo: ele quebra ou monta moléculas? Quebrar libera energia (catabolismo); montar gasta energia (anabolismo).",
+    summary: "Catabolismo quebra moléculas e libera energia (produz ATP); anabolismo constrói moléculas e gasta ATP. No jejum predomina o catabolismo; no pós-prandial, o anabolismo."
   },
   {
     key: "endocrino", station: "Hormônios", title: "Insulina e glucagon", color: "#2f6fd0", pos: [3.6, -5.6],
@@ -574,7 +624,9 @@ function labelTex(l1, l2, bar, state) {
   x.fillStyle = state === "locked" ? "#eef1f4" : "#ffffff"; rr(x, 10, 10, 492, 124, 14); x.fill();
   x.fillStyle = bar; rr(x, 10, 10, 22, 124, 10); x.fill();
   x.textBaseline = "middle"; x.textAlign = "left";
-  x.fillStyle = state === "locked" ? "#8a94a6" : "#1b2333"; x.font = "36px Silkscreen, monospace"; x.fillText(l1, 52, 56);
+  x.fillStyle = state === "locked" ? "#8a94a6" : "#1b2333"; let fs = 36; x.font = fs + "px Silkscreen, monospace";
+  while (fs > 22 && x.measureText(l1).width > 430) { fs -= 2; x.font = fs + "px Silkscreen, monospace"; }
+  x.fillText(l1, 52, 56);
   x.fillStyle = state === "done" ? "#13897d" : state === "locked" ? "#8a94a6" : "#5a6579"; x.font = "600 30px Inter, sans-serif"; x.fillText(l2, 52, 104);
   const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; return t;
 }
@@ -716,8 +768,8 @@ function toast(msg, ms = 2400) { const t = $("#toast"); t.textContent = msg; t.h
 /* ---------------- Modal ---------------- */
 const modal = $("#modal");
 let views = null;
-function openModal(kind) { S.modal = kind; modal.hidden = false; $("#talk").hidden = true; }
-function closeModal() { S.modal = null; modal.hidden = true; modal.innerHTML = ""; views = null; stopSpeech(); canvas.focus({ preventScroll: true }); }
+function openModal(kind) { S.modal = kind; modal.hidden = false; $("#talk").hidden = true; music.duck(true); }
+function closeModal() { S.modal = null; modal.hidden = true; modal.innerHTML = ""; views = null; stopSpeech(); music.duck(false); canvas.focus({ preventScroll: true }); }
 function panelHead(img, eyebrow, title, onClose) {
   const h = el("div", "panel-head");
   const im = el("img"); im.src = img || ""; im.alt = ""; h.append(im);
@@ -782,7 +834,12 @@ function challengePanel(i) {
   cur = {
     i, fb,
     right(msg) { fb.className = "fb ok"; fb.textContent = msg; sfx.ok(); },
-    wrong(msg) { S.phaseErr++; S.errors++; fb.className = "fb bad"; fb.textContent = msg; fb.classList.remove("shake"); void fb.offsetWidth; fb.classList.add("shake"); sfx.bad(); },
+    wrong(msg) {
+      S.phaseErr++; S.errors++;
+      // up to 2 errors per station cost 100 pts each; from the 3rd error on, each one costs 400 pts
+      if (S.phaseErr === 2) msg += " Atenção: a partir do próximo erro nesta estação, cada erro tira 400 pontos.";
+      if (S.phaseErr >= 3) { msg += " (−400 pts)"; toast("Muitos erros: −400 pontos"); }
+      fb.className = "fb bad"; fb.textContent = msg; fb.classList.remove("shake"); void fb.offsetWidth; fb.classList.add("shake"); sfx.bad(); },
     clear() { fb.className = "fb"; fb.textContent = ""; },
     done: () => finishPhase(i)
   };
@@ -843,33 +900,48 @@ const RUN = [
       ], `Pergunta ${k} de ${t}`)
     ]);
   },
-  // 2. Nutrição
+  // 2. Bioenergética
   work => {
-    const stage = el("div", "stack"); work.append(stage);
-    stage.append(el("p", "q-text", "Separe os alimentos pelo nutriente que aparece em maior quantidade. Toque no alimento e depois no grupo."));
-    stage.append(el("p", "note-pause", "Valores aproximados em 100 g de alimento: C = carboidrato, P = proteína, G = gordura (em gramas)."));
-    const foods = shuffle([
-      ["Arroz branco cozido", "C 28 · P 2,5 · G 0,2", "c"], ["Pão francês", "C 58 · P 8 · G 3", "c"], ["Macarrão cozido", "C 30 · P 5,8 · G 0,9", "c"],
-      ["Peito de frango grelhado", "C 0 · P 32 · G 2,5", "p"], ["Clara de ovo", "C 0,7 · P 11 · G 0,2", "p"],
-      ["Azeite de oliva", "C 0 · P 0 · G 100", "g"], ["Manteiga", "C 0,1 · P 0,9 · G 82", "g"]
+    seq(work, [
+      (stage, next) => {
+        stage.append(el("div", "step-label", "Parte 1 de 3"), el("p", "q-text", "Classifique cada processo do corpo: é catabolismo ou anabolismo? Toque no processo e depois no grupo."));
+        const items = shuffle([
+          ["Digestão do amido do pão até glicose", "quebra"], ["Quebra do glicogênio do fígado em glicose", "quebra"],
+          ["Respiração celular: glicose vira CO₂, água e ATP", "quebra"], ["Uso da gordura de reserva durante o jejum", "quebra"],
+          ["Fígado guardando glicose como glicogênio", "monta"], ["Formação de músculo a partir de aminoácidos", "monta"],
+          ["Excesso de energia guardado como gordura", "monta"]
+        ]);
+        const chips = el("div", "chips"); let sel = null, left = items.length;
+        const bins = el("div", "bins"); bins.style.gridTemplateColumns = "repeat(2, 1fr)"; const binEls = {};
+        items.forEach(f => {
+          const c = el("button", "chip"); c.type = "button"; c.append(el("span", null, f[0]));
+          c.onclick = () => { if (c.classList.contains("done")) return; chips.querySelectorAll(".chip").forEach(x => x.classList.remove("sel")); c.classList.add("sel"); sel = { f, c }; Object.values(binEls).forEach(b => b.classList.add("ready")); };
+          chips.append(c);
+        });
+        [["quebra", "Catabolismo", "quebra moléculas · libera energia"], ["monta", "Anabolismo", "constrói moléculas · gasta energia"]].forEach(b => {
+          const be = el("button", "bin"); be.type = "button"; be.append(el("span", "bt", b[1]), el("span", "bs", b[2])); const inn = el("div", "in"); be.append(inn); binEls[b[0]] = be;
+          be.onclick = () => {
+            if (!sel) { toast("Primeiro toque em um processo."); return; }
+            if (sel.f[1] === b[0]) { inn.append(el("span", null, sel.f[0])); sel.c.classList.remove("sel"); sel.c.classList.add("done"); sel.c.disabled = true; sel = null; left--; Object.values(binEls).forEach(x => x.classList.remove("ready")); cur.right(left ? `Certo! Faltam ${left}.` : "Tudo classificado!"); if (!left) setTimeout(next, 1100); }
+            else cur.wrong("Esse processo não é desse grupo. Ele quebra ou monta moléculas?");
+          };
+          bins.append(be);
+        });
+        stage.append(chips, bins);
+      },
+      (s, n) => mcq(s, n, "O Pedro está em jejum e acabou de fazer exercício. O que predomina no corpo dele agora?", [
+        { t: "Catabolismo: quebrar as reservas para liberar energia", ok: true, msg: "Isso. No jejum e no exercício o corpo quebra glicogênio e gordura para manter a energia." },
+        { t: "Anabolismo: guardar glicose como glicogênio", msg: "Isso acontece no estado pós-prandial, quando sobra glicose. O Pedro está em jejum." },
+        { t: "Nenhum dos dois: em jejum o metabolismo para", msg: "O metabolismo nunca para. Ele só muda de direção conforme o estado do corpo." },
+        { t: "Anabolismo: construir músculo durante a corrida", msg: "Durante o exercício o corpo está gastando energia, não guardando." }
+      ], "Parte 2 de 3"),
+      (s, n) => mcq(s, n, "Qual molécula faz a ponte entre o catabolismo e o anabolismo?", [
+        { t: "ATP", ok: true, msg: "Isso. O catabolismo produz ATP e o anabolismo gasta ATP." },
+        { t: "Glicogênio", msg: "Glicogênio é um estoque de glicose, não a moeda que transporta a energia." },
+        { t: "Insulina", msg: "A insulina é um hormônio que dá o sinal, mas não carrega energia." },
+        { t: "Água", msg: "A água participa de reações, mas não carrega a energia entre elas." }
+      ], "Parte 3 de 3")
     ]);
-    const chips = el("div", "chips"); let sel = null, left = foods.length;
-    const bins = el("div", "bins"), binEls = {};
-    foods.forEach(f => {
-      const c = el("button", "chip"); c.type = "button"; c.append(el("span", null, f[0]), el("small", null, f[1]));
-      c.onclick = () => { if (c.classList.contains("done")) return; chips.querySelectorAll(".chip").forEach(x => x.classList.remove("sel")); c.classList.add("sel"); sel = { f, c }; Object.values(binEls).forEach(b => b.classList.add("ready")); };
-      chips.append(c);
-    });
-    [["c", "Carboidrato", "vira glicose"], ["p", "Proteína", "constrói o corpo"], ["g", "Gordura", "reserva de energia"]].forEach(b => {
-      const be = el("button", "bin"); be.type = "button"; be.append(el("span", "bt", b[1]), el("span", "bs", b[2])); const inn = el("div", "in"); be.append(inn); binEls[b[0]] = be;
-      be.onclick = () => {
-        if (!sel) { toast("Primeiro toque em um alimento."); return; }
-        if (sel.f[2] === b[0]) { inn.append(el("span", null, sel.f[0])); sel.c.classList.remove("sel"); sel.c.classList.add("done"); sel.c.disabled = true; sel = null; left--; Object.values(binEls).forEach(x => x.classList.remove("ready")); cur.right(left ? `Certo! Faltam ${left}.` : "Tudo separado!"); if (!left) setTimeout(() => cur && cur.done(), 1100); }
-        else cur.wrong(`${sel.f[0]}: esse não é o maior número da tabela. Compare C, P e G.`);
-      };
-      bins.append(be);
-    });
-    stage.append(chips, bins);
   },
   // 3. Hormônios
   work => {
@@ -938,13 +1010,15 @@ const RUN = [
 /* ---------------- Phase completion ---------------- */
 function finishPhase(i) {
   if (S.phase !== i) return;
-  const base = Math.max(400, 1000 - S.phaseErr * 100);
+  const small = Math.min(S.phaseErr, 2), big = Math.max(0, S.phaseErr - 2);
+  const base = 1000 - small * 100 - big * 400;
   let bonus = 0;
   if (S.phaseErr === 0) { S.streak++; bonus = Math.min(300, (S.streak - 1) * 100); } else S.streak = 0;
   const pts = base + bonus;
-  S.score += pts; S.phase = i + 1; cur = null;
+  S.score = Math.max(0, S.score + pts); S.phase = i + 1; cur = null;
   closeModal(); refreshStations(); updateHUD();
-  showBanner(S.phaseErr === 0 ? "Perfeito" : "Certo", "+" + pts + " pts", S.streak >= 2 ? `Sequência sem erros: ${S.streak} (bônus +${bonus})` : `Estação ${S.phase} de ${N} concluída`, S.phaseErr === 0 ? "#13897d" : "#2f6fd0");
+  const info = big ? `${big} erro${big > 1 ? "s" : ""} de −400 pts nesta estação` : S.streak >= 2 ? `Sequência sem erros: ${S.streak} (bônus +${bonus})` : `Estação ${S.phase} de ${N} concluída`;
+  showBanner(S.phaseErr === 0 ? "Perfeito" : big ? "Concluída" : "Certo", (pts >= 0 ? "+" : "−") + Math.abs(pts) + " pts", info, S.phaseErr === 0 ? "#13897d" : big ? "#b9800f" : "#2f6fd0");
   burst(PHASES[i].pos[0], 1.8, PHASES[i].pos[1], 30);
   sfx.win();
   if (S.phase >= N) setTimeout(startEnding, 1400);
@@ -955,7 +1029,7 @@ function showBanner(big, pts, small, bg) {
   b.hidden = false; clearTimeout(showBanner._t); showBanner._t = setTimeout(() => b.hidden = true, 1700);
 }
 function startEnding() {
-  S.mode = "ending"; S.won = true;
+  S.mode = "ending"; S.won = true; music.stop();
   const bonus = Math.round(S.time * 2); S.timeBonus = bonus; S.score += bonus; updateHUD();
   $("#talk").hidden = true; $("#helpline").hidden = true;
   pedroLying.g.visible = false; pedroUp.g.visible = true; blanket.position.y = 0.82;
@@ -963,7 +1037,7 @@ function startEnding() {
   setTimeout(() => showEnd(true), 3400);
 }
 function timeUp() {
-  S.mode = "over"; S.won = false; S.timeBonus = 0; closeModal(); $("#talk").hidden = true; $("#helpline").hidden = true;
+  S.mode = "over"; S.won = false; S.timeBonus = 0; music.stop(); closeModal(); $("#talk").hidden = true; $("#helpline").hidden = true;
   showBanner("Tempo esgotado", S.score + " pts", `Você chegou à estação ${Math.min(N, S.phase + 1)}`, "#c43d3d");
   setTimeout(() => showEnd(false), 1800);
 }
@@ -1106,6 +1180,7 @@ $("#startBtn").onclick = () => {
   $("#nameErr").textContent = ""; store.set("pedro-name", name);
   S.name = name;
   if (isTouch && !isFullscreen() && !isStandalone()) enterFullscreen(true); // phones: entering the game also goes full screen
+  music.start(); // needs this tap to be allowed to play
   beginGame();
 };
 $("#rankFromStart").onclick = () => showRanking("start");
@@ -1142,7 +1217,7 @@ document.addEventListener("fullscreenchange", syncFsButtons); document.addEventL
 // show the buttons on phones and tablets (and on desktop when the browser supports it), but not when already opened from the home screen
 if (!isStandalone() && (isTouch || fsSupported)) { $("#fsBtn").hidden = false; $("#fsStart").hidden = false; }
 syncFsButtons();
-$("#muteBtn").onclick = () => { muted = !muted; $("#muteBtn").textContent = muted ? "×" : "♪"; $("#muteBtn").setAttribute("aria-label", muted ? "Som desligado" : "Som ligado"); };
+$("#muteBtn").onclick = () => { muted = !muted; if (muted) music.stop(); else if (S.mode === "play" || S.mode === "briefing") music.start(); $("#muteBtn").textContent = muted ? "×" : "♪"; $("#muteBtn").setAttribute("aria-label", muted ? "Som desligado" : "Som ligado"); };
 
 function beginGame() {
   Object.assign(S, { mode: "briefing", phase: 0, time: TOTAL, score: 0, errors: 0, hints: 0, streak: 0, won: false, savedId: null, timeBonus: 0 });
@@ -1163,7 +1238,7 @@ function beginGame() {
   body.append(c);
   const board = el("div", "board");
   const r = el("div", "refs"); r.append(el("h3", null, "Regras"));
-  const tb = el("table"); [["Tempo total", "20 min"], ["Lendo o quadro", "tempo parado"], ["Cada dica", "−1 min"], ["Cada erro", "−100 pts"]].forEach(row => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", null, row[1])); tb.append(tr); }); r.append(tb);
+  const tb = el("table"); [["Tempo total", "20 min"], ["Lendo o quadro", "tempo parado"], ["Cada dica", "−1 min"], ["1º e 2º erro na estação", "−100 pts cada"], ["Do 3º erro em diante", "−400 pts cada"]].forEach(row => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", null, row[1])); tb.append(tr); }); r.append(tb);
   const cl = el("div", "clinical"); cl.append(el("h3", null, "Pontos"), el("p", null, "Até 1000 pontos por estação, bônus quando você acerta várias estações seguidas sem errar e 2 pontos por segundo que sobrar no final."));
   board.append(r, cl); body.append(board);
   const foot = el("div", "panel-foot"); foot.append(el("span", "spacer"));
@@ -1172,7 +1247,7 @@ function beginGame() {
   foot.append(go); body.append(foot); panel.append(body); modal.append(panel);
   setTimeout(() => go.focus({ preventScroll: true }), 50);
 }
-function restart() { $("#endScreen").hidden = true; $("#rankScreen").hidden = true; beginGame(); }
+function restart() { $("#endScreen").hidden = true; $("#rankScreen").hidden = true; music.start(); beginGame(); }
 
 /* ---------------- Input ---------------- */
 addEventListener("keydown", e => {
@@ -1313,6 +1388,7 @@ function tick() {
     if (c.m.position.y < 0.04) { c.m.position.y = 0.04; c.v.set(0, 0, 0); }
     if (c.life <= 0) { scene.remove(c.m); confetti.splice(q, 1); }
   }
+  music.setTense(S.mode === "play" && S.time <= 120);
   if (S.mode === "play" && S.modal !== "lesson") { S.time -= dt; if (S.time <= 0) { S.time = 0; updateHUD(); timeUp(); } }
   if (S.mode === "play" || S.mode === "briefing") updateHUD();
   renderer.render(scene, camera);
