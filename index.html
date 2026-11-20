@@ -81,6 +81,7 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 #joy{position:fixed;left:calc(22px + env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.6);border:1px solid var(--line);z-index:21;touch-action:none}
 #knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:10px;background:var(--accent);box-shadow:0 3px 0 var(--accent-deep);pointer-events:none}
 @media (pointer:coarse){ #talk{right:calc(22px + env(safe-area-inset-right,0px));left:auto;transform:none;bottom:calc(46px + env(safe-area-inset-bottom,0px));font-size:17px;padding:16px 20px;max-width:calc(100% - 190px);white-space:normal;line-height:1.2} #talk:active{transform:translateY(2px)} #helpline{display:none} #joy{width:132px;height:132px} }
+.fs-help{background:#eef4fd;border:1px solid #c8daf5;border-radius:6px;padding:8px 10px;color:var(--ink)}
 .touch-only{display:none}
 @media (pointer:coarse){ .touch-only{display:block} .desk-only{display:none} }
 
@@ -203,6 +204,12 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 .linkish{appearance:none;background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;font-size:13px;opacity:.8}
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
+<meta name="theme-color" content="#14213d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Desmaio do Pedro">
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -248,7 +255,9 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
     <div class="row">
       <button class="btn" id="startBtn" type="button">Começar plantão</button>
       <button class="btn ghost" id="rankFromStart" type="button">Ver ranking</button>
+      <button class="btn ghost" id="fsStart" type="button" hidden>Tela cheia</button>
     </div>
+    <p class="controls-note fs-help" id="fsHelp" hidden></p>
   </div>
 </div>
 <div class="screen" id="endScreen" hidden></div>
@@ -1095,20 +1104,44 @@ $("#startBtn").onclick = () => {
   const name = $("#nameInput").value.replace(/\s+/g, " ").trim().slice(0, 16);
   if (!name) { $("#nameErr").textContent = "Digite seu nome para aparecer no ranking."; $("#nameInput").focus(); return; }
   $("#nameErr").textContent = ""; store.set("pedro-name", name);
-  S.name = name; beginGame();
+  S.name = name;
+  if (isTouch && !isFullscreen() && !isStandalone()) enterFullscreen(true); // phones: entering the game also goes full screen
+  beginGame();
 };
 $("#rankFromStart").onclick = () => showRanking("start");
+
+/* ---------- Full screen (phones) ---------- */
 const rootEl = document.documentElement;
-if (rootEl.requestFullscreen || rootEl.webkitRequestFullscreen) {
-  $("#fsBtn").hidden = false;
-  $("#fsBtn").onclick = () => {
-    try {
-      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-      const p = fsEl ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (rootEl.requestFullscreen || rootEl.webkitRequestFullscreen).call(rootEl);
-      if (p && p.catch) p.catch(() => toast("Este navegador não deixou abrir em tela cheia."));
-    } catch (e) { toast("Este navegador não deixou abrir em tela cheia."); }
-  };
+const fsSupported = !!(rootEl.requestFullscreen || rootEl.webkitRequestFullscreen);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function isStandalone() { return matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches || navigator.standalone === true; }
+function showFsHelp() {
+  const msg = isIOS
+    ? "No iPhone, o Safari não deixa sites abrirem em tela cheia. Para jogar sem as barras: toque em Compartilhar (□↑) → Adicionar à Tela de Início, e abra o jogo pelo ícone novo."
+    : "Este navegador não deixou abrir em tela cheia. Tente pelo Chrome, ou use o menu ⋮ → Adicionar à tela inicial.";
+  const h = $("#fsHelp"); if (h && !$("#startScreen").hidden) { h.textContent = msg; h.hidden = false; } else toast(msg, 6000);
 }
+function enterFullscreen(quiet) {
+  if (!fsSupported) { if (!quiet) showFsHelp(); return; }
+  try {
+    const p = (rootEl.requestFullscreen || rootEl.webkitRequestFullscreen).call(rootEl, { navigationUI: "hide" });
+    const lock = () => { try { const o = screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"); if (o && o.catch) o.catch(() => {}); } catch (e) {} };
+    if (p && p.then) p.then(lock).catch(() => { if (!quiet) showFsHelp(); }); else lock();
+  } catch (e) { if (!quiet) showFsHelp(); }
+}
+function exitFullscreen() { try { const p = (document.exitFullscreen || document.webkitExitFullscreen).call(document); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function syncFsButtons() {
+  const on = isFullscreen();
+  $("#fsBtn").textContent = on ? "✕" : "⛶"; $("#fsBtn").setAttribute("aria-label", on ? "Sair da tela cheia" : "Tela cheia");
+  $("#fsStart").textContent = on ? "Sair da tela cheia" : "Tela cheia";
+}
+const fsToggle = () => { if (isFullscreen()) exitFullscreen(); else enterFullscreen(false); };
+$("#fsBtn").onclick = fsToggle; $("#fsStart").onclick = fsToggle;
+document.addEventListener("fullscreenchange", syncFsButtons); document.addEventListener("webkitfullscreenchange", syncFsButtons);
+// show the buttons on phones and tablets (and on desktop when the browser supports it), but not when already opened from the home screen
+if (!isStandalone() && (isTouch || fsSupported)) { $("#fsBtn").hidden = false; $("#fsStart").hidden = false; }
+syncFsButtons();
 $("#muteBtn").onclick = () => { muted = !muted; $("#muteBtn").textContent = muted ? "×" : "♪"; $("#muteBtn").setAttribute("aria-label", muted ? "Som desligado" : "Som ligado"); };
 
 function beginGame() {

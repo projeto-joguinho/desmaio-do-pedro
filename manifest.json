@@ -1,0 +1,11 @@
+{
+  "name": "O Desmaio do Pedro",
+  "short_name": "Desmaio do Pedro",
+  "description": "Escape room de bioquímica em voxel para o ensino médio",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#e6ebf1",
+  "theme_color": "#14213d"
+}
