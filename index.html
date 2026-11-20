@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>O Desmaio do Pedro</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: full-screen third-person voxel infirmary (canvas) with clinical report panels on top. Single light clinical look. */
+:root{
+  --bg:#e6ebf1; --paper:#ffffff; --panel:#f6f8fb; --ink:#1b2333; --muted:#5a6579; --line:#cfd6e1;
+  --accent:#2f6fd0; --accent-deep:#1f4f9c; --teal:#13897d; --teal-soft:#e2f3f1;
+  --warn:#c43d3d; --warn-soft:#fbe8e8; --amber:#b9800f;
+  --o1:#c9473d; --o2:#2f6fd0; --o3:#b9800f; --o4:#23946b;
+  --gold:#e3b23c; --silver:#c7ced9; --bronze:#c98a5f; --navy:#14213d; --navy-2:#24467f;
+  --font-d:"Silkscreen",ui-monospace,monospace;
+  --font-b:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-m:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-b);overflow:hidden;-webkit-tap-highlight-color:transparent}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
+button{font:inherit;color:inherit;touch-action:manipulation}
+html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+input{-webkit-user-select:text;user-select:text}
+.btn{appearance:none;border:0;cursor:pointer;border-radius:6px;padding:11px 18px;font-weight:600;font-size:15px;background:var(--accent);color:#fff;box-shadow:0 3px 0 var(--accent-deep);transition:transform .08s,box-shadow .08s,filter .15s}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--accent-deep)}
+.btn.teal{background:var(--teal);box-shadow:0 3px 0 #0c5f57}
+.btn.ghost{background:var(--paper);color:var(--accent-deep);box-shadow:0 3px 0 var(--line);border:1px solid var(--line)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
+.btn:focus-visible,.opt:focus-visible,.chip:focus-visible,.bin:focus-visible,input:focus-visible,.mbtn:focus-visible,.icon-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));z-index:30;overflow-y:auto}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 40px rgba(20,33,61,.18);width:100%;max-width:560px;padding:24px;margin:auto}
+.eyebrow{font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.15}
+h1{font-family:var(--font-d);font-weight:400;font-size:clamp(28px,6vw,40px);letter-spacing:.01em}
+h2{font-size:21px;font-weight:700}
+p{line-height:1.55;margin:0}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.lbl{font-weight:700;font-size:13px;color:var(--muted)}
+input.name{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:11px 12px;font:600 17px var(--font-b);color:var(--ink);background:var(--panel)}
+.player-id{display:flex;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
+.player-id img{width:84px;height:84px;object-fit:contain;flex:none;background:#fff;border-radius:6px;border:1px solid var(--line)}
+.player-id .t{min-width:0;display:flex;flex-direction:column;gap:6px;flex:1}
+.controls-note{font-size:13px;color:var(--muted);line-height:1.6}
+kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;color:var(--ink)}
+.err-msg{color:var(--warn);font-weight:700;font-size:13px;min-height:1em}
+.case-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.case-strip div{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.case-strip b{display:block;font-family:var(--font-m);font-size:17px}
+.case-strip span{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.case-strip .alert b{color:var(--warn)}
+
+#hud{position:fixed;left:0;right:0;top:0;z-index:27;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) max(12px, env(safe-area-inset-right,0px)) 0 max(12px, env(safe-area-inset-left,0px));pointer-events:none}
+.pill{pointer-events:auto;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(20,33,61,.12);min-width:0;font-weight:700}
+.pill img{width:30px;height:30px;object-fit:contain}
+.pill .who{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+#timer{font-family:var(--font-d);font-size:22px;font-variant-numeric:tabular-nums}
+#timer.low{color:var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.score{font-family:var(--font-m);font-variant-numeric:tabular-nums;color:var(--accent-deep)}
+.dots{display:flex;gap:3px}
+.dots i{width:11px;height:11px;border-radius:2px;background:#eef1f5;border:1px solid var(--line)}
+.dots i.done{background:var(--teal);border-color:var(--teal)}
+.dots i.now{background:var(--amber);border-color:var(--amber)}
+#objective{position:fixed;left:50%;transform:translateX(-50%);top:calc(62px + env(safe-area-inset-top,0px));z-index:19;background:rgba(20,33,61,.86);color:#fff;font-weight:600;font-size:14px;padding:6px 14px;border-radius:6px;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#helpline{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:19;color:var(--ink);background:rgba(255,255,255,.8);font-size:12px;padding:4px 10px;border-radius:6px;white-space:nowrap;pointer-events:none}
+.icon-btn{pointer-events:auto;appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.94);border-radius:8px;width:40px;height:40px;cursor:pointer;font-weight:700;color:var(--ink);box-shadow:0 4px 14px rgba(20,33,61,.12)}
+.hud-right{display:flex;gap:8px;align-items:flex-start}
+@media (max-width:560px){ .pill .who{display:none} #timer{font-size:18px} #objective{font-size:12px;top:calc(56px + env(safe-area-inset-top,0px))} }
+
+#talk{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(40px + env(safe-area-inset-bottom,0px));z-index:21;font-size:16px;padding:13px 22px;white-space:nowrap}
+#talk:active{transform:translateX(-50%) translateY(2px)}
+#joy{position:fixed;left:calc(22px + env(safe-area-inset-left,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.6);border:1px solid var(--line);z-index:21;touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:10px;background:var(--accent);box-shadow:0 3px 0 var(--accent-deep);pointer-events:none}
+@media (pointer:coarse){ #talk{right:calc(22px + env(safe-area-inset-right,0px));left:auto;transform:none;bottom:calc(46px + env(safe-area-inset-bottom,0px));font-size:17px;padding:16px 20px;max-width:calc(100% - 190px);white-space:normal;line-height:1.2} #talk:active{transform:translateY(2px)} #helpline{display:none} #joy{width:132px;height:132px} }
+.touch-only{display:none}
+@media (pointer:coarse){ .touch-only{display:block} .desk-only{display:none} }
+
+#modal{position:fixed;inset:0;z-index:25;display:flex;justify-content:center;align-items:flex-start;padding:calc(104px + env(safe-area-inset-top,0px)) max(12px, env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(12px, env(safe-area-inset-left,0px));background:rgba(20,33,61,.32);backdrop-filter:blur(2px);overflow-y:auto}
+@media (max-height:560px){ #modal{padding-top:calc(62px + env(safe-area-inset-top,0px))} }
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 40px rgba(20,33,61,.25);width:100%;max-width:800px;overflow:hidden;margin-bottom:16px}
+.panel-head{display:flex;gap:14px;align-items:center;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.panel-head img{width:72px;height:72px;object-fit:contain;flex:none;background:#fff;border-radius:6px;border:1px solid var(--line)}
+.panel-head .t{min-width:0;flex:1}
+.panel-head .close{margin-left:auto;flex:none}
+.panel-body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.concept{display:flex;flex-direction:column;gap:9px;font-size:15.5px;max-width:70ch}
+.concept h3,.board h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.board > div{border-radius:8px;padding:12px 14px;min-width:0}
+.refs{background:var(--panel);border:1px solid var(--line)}
+.refs table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+.refs td{padding:5px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+.refs td:last-child{font-family:var(--font-m);text-align:right;padding-left:10px;font-weight:600}
+.refs tr:last-child td{border-bottom:0}
+.clinical{background:var(--warn-soft);border:1px solid #efc6c6;font-size:14.5px;line-height:1.55}
+.clinical h3{color:var(--warn)!important;margin-bottom:4px}
+.panel-foot{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.panel-foot .spacer{flex:1}
+.note-pause{font-size:13px;color:var(--muted)}
+@media (max-width:640px){ .board{grid-template-columns:1fr} .panel-head img{width:56px;height:56px} .concept{font-size:15px} }
+
+.fb{min-height:22px;font-weight:700;font-size:14.5px;border-radius:6px;display:flex;align-items:center}
+.fb.ok{background:var(--teal-soft);color:var(--teal);padding:8px 12px}
+.fb.bad{background:var(--warn-soft);color:var(--warn);padding:8px 12px}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.step-label{font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.q-text{font-weight:700;font-size:19px;line-height:1.3}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{appearance:none;border:0;cursor:pointer;border-radius:8px;padding:13px 14px;min-height:60px;color:#fff;font-weight:600;font-size:15px;text-align:left;display:flex;gap:10px;align-items:center;box-shadow:0 3px 0 rgba(0,0,0,.2);transition:transform .08s,opacity .2s;line-height:1.35}
+.opt:active{transform:translateY(2px)}
+.opt .shape{font-size:18px;flex:none;width:22px;text-align:center}
+.opt.c0{background:var(--o1)}.opt.c1{background:var(--o2)}.opt.c2{background:var(--o3)}.opt.c3{background:var(--o4)}
+.opt.is-no{opacity:.32}
+.opt.is-ok{outline:4px solid var(--ink);outline-offset:2px}
+.opt:disabled{cursor:default}
+@media (max-width:540px){ .opts{grid-template-columns:1fr} }
+
+.ficha{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.ficha .fh{background:var(--navy);color:#fff;font-weight:700;font-size:13px;letter-spacing:.04em;padding:8px 12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ficha table{width:100%;border-collapse:collapse;font-size:14px}
+.ficha td{padding:7px 12px;border-bottom:1px solid #eef1f5}
+.ficha td:first-child{color:var(--muted);font-weight:600;width:40%}
+.ficha .val{font-family:var(--font-m);font-weight:600}
+.ficha .flag{color:var(--warn);font-weight:700}
+.ficha .ref{color:var(--muted);font-family:var(--font-m);font-size:12px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{appearance:none;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:7px 11px;font-weight:700;font-size:14.5px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;box-shadow:0 2px 0 var(--line);text-align:left}
+.chip small{font-family:var(--font-m);font-weight:400;font-size:11.5px;color:var(--muted)}
+.chip.sel{border-color:var(--accent);background:#eaf1fc;box-shadow:0 2px 0 var(--accent)}
+.chip.done{opacity:.35;cursor:default}
+.bins{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bin{appearance:none;cursor:pointer;border:1px dashed #a9b4c4;background:var(--panel);border-radius:8px;padding:10px;min-height:96px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.bin .bt{font-weight:700;font-size:15px}
+.bin .bs{font-size:12px;color:var(--muted)}
+.bin .in{display:flex;flex-wrap:wrap;gap:4px}
+.bin .in span{font-size:12px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.bin.ready{border-style:solid;border-color:var(--accent);background:#eef4fd}
+@media (max-width:540px){ .bins{grid-template-columns:1fr} .bin{min-height:64px} }
+
+.match{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);gap:10px}
+.match .col{display:flex;flex-direction:column;gap:8px}
+.mbtn{appearance:none;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:9px 11px;font-weight:600;font-size:14px;text-align:left;min-height:50px;line-height:1.35}
+.mbtn.term{font-weight:700;font-size:15px}
+.mbtn.sel{border-color:var(--accent);background:#eaf1fc}
+.mbtn.m0{border-color:var(--o1);background:#fbebe9}.mbtn.m1{border-color:var(--o2);background:#e9f0fb}.mbtn.m2{border-color:var(--o3);background:#fbf3e1}.mbtn.m3{border-color:var(--o4);background:#e4f4ee}
+.mbtn.locked{cursor:default}
+
+.slots{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel);border:1px dashed #a9b4c4;border-radius:8px;padding:10px;min-height:50px}
+.slots .s{background:var(--navy);color:#fff;font-weight:600;border-radius:5px;padding:6px 9px;font-size:13.5px;display:flex;flex-direction:column;line-height:1.2}
+.slots .s small{font-size:11px;opacity:.8;font-weight:400}
+.slots .arrow{color:var(--accent);font-weight:800}
+.slots .ph{color:var(--muted);font-size:13px}
+
+#banner{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);z-index:40;padding:24px 16px;text-align:center;color:#fff;background:var(--teal);box-shadow:0 10px 30px rgba(0,0,0,.2);animation:pop .3s cubic-bezier(.2,1.5,.4,1)}
+#banner .big{font-family:var(--font-d);font-size:clamp(30px,7vw,48px)}
+#banner .pts{font-family:var(--font-m);font-size:24px;font-weight:600;margin-top:6px;display:inline-block;background:rgba(255,255,255,.2);padding:4px 14px;border-radius:6px}
+#banner .streak{font-size:15px;margin-top:8px;opacity:.95}
+@keyframes pop{from{transform:translateY(-50%) scale(.7);opacity:0}to{transform:translateY(-50%) scale(1);opacity:1}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom,0px));z-index:45;background:var(--navy);color:#fff;font-weight:600;padding:10px 16px;border-radius:6px;max-width:calc(100% - 40px);text-align:center}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.stat b{display:block;font-family:var(--font-m);font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:460px){ .stats{grid-template-columns:repeat(2,1fr)} }
+.summary{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.summary li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14.5px;line-height:1.45}
+.summary img{width:42px;height:42px;flex:none;object-fit:contain}
+.safety{background:var(--warn-soft);color:#8f2525;border:1px solid #efc6c6;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;line-height:1.45}
+
+#rankScreen{background:linear-gradient(180deg,var(--navy) 0%,var(--navy-2) 100%)}
+.rank-card{max-width:640px;background:transparent;border:0;box-shadow:none;color:#fff;padding:8px 0}
+.rank-card h1{text-align:center;color:#fff}
+.rank-note{text-align:center;font-weight:600;opacity:.85;font-size:14px}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end;height:290px;margin-top:10px}
+.pod{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.pod img{width:72px;height:72px;object-fit:contain}
+.pod .pn{font-weight:700;font-size:16px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.pod .ps{font-family:var(--font-m);font-size:14px;opacity:.9;margin-bottom:6px}
+.pod .bar{width:100%;border-radius:6px 6px 2px 2px;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;font-family:var(--font-d);font-size:30px;color:rgba(20,33,61,.7);height:0;transition:height 1s cubic-bezier(.2,1.2,.4,1)}
+.pod.p1 .bar{background:var(--gold)}.pod.p2 .bar{background:var(--silver)}.pod.p3 .bar{background:var(--bronze)}
+.pod.empty img{opacity:0}
+.rank-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rank-list li{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;background:rgba(255,255,255,.96);color:var(--ink);border-radius:6px;padding:8px 12px;font-weight:600}
+.rank-list li.me{outline:3px solid var(--gold)}
+.rank-list .pos{font-family:var(--font-d);color:var(--accent);text-align:center}
+.rank-list .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-list .sc{font-family:var(--font-m);font-variant-numeric:tabular-nums}
+.rank-empty{text-align:center;background:rgba(255,255,255,.1);border-radius:8px;padding:18px;font-weight:600}
+.rank-actions{justify-content:center;margin-top:18px}
+.teacher{text-align:center;margin-top:12px}
+.linkish{appearance:none;background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;font-size:13px;opacity:.8}
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+
+<canvas id="c" tabindex="-1" aria-label="Enfermaria da escola em voxel"></canvas>
+
+<div id="hud" hidden>
+  <div class="pill"><img id="hudAvatar" alt=""><span class="who" id="hudName"></span></div>
+  <div class="pill"><span id="timer">20:00</span></div>
+  <div class="hud-right">
+    <div class="pill"><span class="score" id="hudScore">0</span><div class="dots" id="dots"></div></div>
+    <button class="icon-btn" id="fsBtn" type="button" aria-label="Tela cheia" hidden>⛶</button>
+    <button class="icon-btn" id="muteBtn" type="button" aria-label="Som ligado">♪</button>
+  </div>
+</div>
+<div id="objective" hidden></div>
+<div id="helpline" hidden>W/S andar · A/D virar · setas ou mouse: câmera · E examinar</div>
+<button class="btn" id="talk" type="button" hidden>Examinar</button>
+<div id="joy" hidden><div id="knob"></div></div>
+<div id="modal" hidden></div>
+<div id="banner" hidden></div>
+<div id="toast" hidden></div>
+
+<div class="screen" id="startScreen">
+  <div class="card stack">
+    <div class="eyebrow">Escape room de bioquímica · caso clínico</div>
+    <h1>O Desmaio do Pedro</h1>
+    <p>Pedro, 16 anos, desmaiou na aula de Educação Física e foi levado para a enfermaria da escola. Você é a enfermeira de plantão e tem <b>20 minutos</b> para passar pelas 4 estações, entender o que aconteceu e decidir como ajudar.</p>
+    <div class="case-strip">
+      <div><b>16 anos</b><span>idade</span></div>
+      <div><b>12 h</b><span>sem comer</span></div>
+      <div class="alert"><b>48 mg/dL</b><span>glicose</span></div>
+    </div>
+    <div class="player-id">
+      <img alt="" data-portrait="nurse">
+      <div class="t">
+        <label class="lbl" for="nameInput">Seu nome (aparece no ranking)</label>
+        <input class="name" id="nameInput" maxlength="16" autocomplete="off" placeholder="Ex.: Ana Clara">
+        <div class="err-msg" id="nameErr"></div>
+      </div>
+    </div>
+    <p class="controls-note touch-only">No celular: o joystick à esquerda anda e vira a enfermeira, arrastar o dedo na tela gira a câmera e o botão <b>Examinar</b> aparece à direita perto de cada estação. Fica melhor com o celular deitado.</p>
+    <p class="controls-note desk-only"><kbd>W</kbd> <kbd>S</kbd> andam para frente e para trás, <kbd>A</kbd> <kbd>D</kbd> viram a personagem, as setas <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> (ou arrastar o mouse) giram a câmera e <kbd>E</kbd> examina uma estação.</p>
+    <div class="row">
+      <button class="btn" id="startBtn" type="button">Começar plantão</button>
+      <button class="btn ghost" id="rankFromStart" type="button">Ver ranking</button>
+    </div>
+  </div>
+</div>
+<div class="screen" id="endScreen" hidden></div>
+<div class="screen" id="rankScreen" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmt = s => { s = Math.max(0, Math.ceil(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const isTouch = matchMedia("(pointer:coarse)").matches || "ontouchstart" in window;
+
+/* ---------------- Sound ---------------- */
+let actx = null, muted = false;
+function beep(freqs, dur = 0.1, type = "sine", vol = 0.14) {
+  if (muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * dur;
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.03);
+    });
+  } catch (e) {}
+}
+const sfx = { ok: () => beep([660, 990]), bad: () => beep([200, 150], 0.13, "square", 0.06), win: () => beep([523, 659, 784, 1047], 0.11, "triangle"), talk: () => beep([1000], 0.06), tick: () => beep([1300], 0.05, "sine", 0.05) };
+
+/* ---------------- Content ---------------- */
+const PHASES = [
+  {
+    key: "triagem", station: "Triagem", title: "Glicose e glicemia", color: "#c43d3d", pos: [-6.0, 1.5],
+    paras: [
+      "A glicose é um tipo de açúcar (fórmula C₆H₁₂O₆). Ela vem principalmente dos alimentos com carboidrato, como pão, arroz e frutas, e é levada pelo sangue até as células.",
+      "Ela é o principal combustível do corpo. O cérebro é quem mais depende dela: gasta cerca de 120 g de glicose por dia e não consegue guardar estoque.",
+      "Glicemia é a quantidade de glicose no sangue. Ela muda ao longo do dia: sobe no estado pós-prandial (logo depois de comer) e cai no jejum (muitas horas sem comer). O corpo trabalha o tempo todo para manter esse valor estável."
+    ],
+    refs: [["Normal em jejum", "70 a 99 mg/dL"], ["Pós-prandial (2 h após comer)", "até 140 mg/dL"], ["Glicose baixa (hipoglicemia)", "abaixo de 70"], ["Glicose muito baixa", "abaixo de 54"], ["mg/dL", "miligramas por decilitro"]],
+    clinical: "O Pedro está em jejum há 12 horas e, depois da Educação Física, entrou num estado de estresse pós-exercício. A glicose dele caiu para 48 mg/dL, bem abaixo do normal. Para reagir, o corpo liberou catecolaminas: adrenalina e noradrenalina, substâncias produzidas a partir da dopa. São elas que causam os tremores, o suor frio e o coração acelerado. O desmaio aconteceu porque o cérebro ficou sem combustível.",
+    hint: "Compare cada resultado da ficha com o valor de referência ao lado. Releia a parte sobre as catecolaminas.",
+    summary: "A glicose é o principal combustível do corpo. Abaixo de 70 mg/dL é hipoglicemia; o Pedro estava com 48 mg/dL."
+  },
+  {
+    key: "nutricao", station: "Nutrição", title: "Os nutrientes dos alimentos", color: "#b9800f", pos: [-3.6, -5.6],
+    paras: [
+      "Os alimentos têm três grupos de nutrientes que dão energia: carboidratos, proteínas e gorduras (também chamadas de lipídios). Quase todo alimento tem um pouco de cada, mas um deles costuma aparecer em maior quantidade.",
+      "Carboidratos (arroz, pão, macarrão, frutas, açúcar) são quebrados na digestão até virar glicose. São a fonte de energia mais rápida.",
+      "Proteínas (carnes, ovos, leite, feijão) servem principalmente para construir e consertar o corpo, como os músculos. Gorduras (óleo, azeite, manteiga) são uma reserva de energia e fazem parte das células."
+    ],
+    refs: [["Carboidrato", "4 kcal por grama"], ["Proteína", "4 kcal por grama"], ["Gordura", "9 kcal por grama"], ["Energia mais rápida", "carboidrato"]],
+    clinical: "Em 12 horas sem comer, o Pedro não recebeu nenhum carboidrato. Sem essa entrada de glicose, o corpo teve que usar o que tinha guardado, e o exercício gastou essa reserva depressa.",
+    hint: "Em cada alimento, veja qual dos três números é o maior: C (carboidrato), P (proteína) ou G (gordura).",
+    summary: "Carboidratos viram glicose e dão energia rápida, proteínas constroem o corpo e gorduras guardam energia."
+  },
+  {
+    key: "endocrino", station: "Hormônios", title: "Insulina e glucagon", color: "#2f6fd0", pos: [3.6, -5.6],
+    paras: [
+      "O pâncreas é um órgão que fica atrás do estômago. Ele controla a glicose do sangue com dois hormônios, que são mensageiros químicos levados pelo sangue: a insulina e o glucagon.",
+      "No estado pós-prandial (depois de comer), a glicose sobe. O pâncreas libera insulina, que faz a glicose entrar nas células e faz o fígado guardar o excesso como glicogênio, um estoque de glicose. Resultado: a glicose do sangue baixa.",
+      "No jejum (muitas horas sem comer) ou durante o exercício, a glicose cai. O pâncreas libera glucagon, que manda o fígado quebrar o glicogênio e soltar glicose no sangue. Em situações de estresse, as catecolaminas (como a adrenalina) ajudam o glucagon nessa tarefa. Resultado: a glicose do sangue sobe."
+    ],
+    refs: [["Insulina", "baixa a glicose"], ["Glucagon", "aumenta a glicose"], ["Estado pós-prandial", "predomina a insulina"], ["Jejum", "predomina o glucagon"], ["Estoque no fígado", "cerca de 100 g"]],
+    clinical: "O Pedro está em jejum há 12 horas, então o pâncreas já estava liberando glucagon, e o estresse pós-exercício somou as catecolaminas. Mesmo assim, o estoque do fígado estava acabando e os músculos gastaram muita glicose na Educação Física. O corpo não conseguiu repor a tempo.",
+    hint: "Insulina e glucagon fazem coisas opostas. Pense em qual estado o Pedro está: pós-prandial ou jejum?",
+    summary: "No estado pós-prandial, o pâncreas libera insulina e a glicose baixa; no jejum, libera glucagon, que usa o glicogênio do fígado para subir a glicose."
+  },
+  {
+    key: "metabolismo", station: "Energia da célula", title: "Como a glicose vira energia", color: "#7a4fb5", pos: [6.0, 1.5],
+    paras: [
+      "Dentro das células, a glicose é usada para produzir ATP. O ATP funciona como a moeda de energia da célula: é ele que paga o trabalho dos músculos, dos neurônios e de quase tudo no corpo. Esse processo se chama respiração celular.",
+      "Primeiro vem a glicólise, no citoplasma: a glicose é quebrada ao meio. Depois, os pedaços entram na mitocôndria, a usina de energia da célula, e passam pelo ciclo de Krebs.",
+      "Por fim, na cadeia respiratória, a mitocôndria usa o oxigênio que respiramos para produzir a maior parte do ATP. Sobram gás carbônico, que sai quando expiramos, e água."
+    ],
+    refs: [["Resumo", "glicose + oxigênio → gás carbônico + água + energia"], ["ATP por glicose", "cerca de 30"], ["Onde se forma mais ATP", "mitocôndria"], ["Gasto do cérebro", "≈ 20% da energia do corpo"]],
+    clinical: "As células do cérebro dependem quase só de glicose. Com a glicose em 48 mg/dL, o cérebro do Pedro produziu pouco ATP e ele desmaiou. Quando a glicose volta ao sangue, a produção de ATP se recupera em poucos minutos.",
+    hint: "Comece pelo combustível e termine na moeda de energia. A primeira quebra da glicose acontece fora da mitocôndria.",
+    summary: "Na respiração celular, a glicose passa por glicólise, ciclo de Krebs e cadeia respiratória e vira ATP, a energia da célula."
+  }
+];
+const N = PHASES.length;
+
+/* ---------------- Three.js world ---------------- */
+const canvas = $("#c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#dfe5ec");
+const camera = new THREE.PerspectiveCamera(58, 1, 0.05, 120);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa5b8, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.55);
+sun.position.set(9, 18, 8); sun.castShadow = true;
+sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 50 });
+scene.add(sun);
+
+const UNIT = new THREE.BoxGeometry(1, 1, 1);
+const matCache = {};
+const M = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: c }));
+function box(w, h, d, c, x, y, z, parent, shadow = true) {
+  const m = new THREE.Mesh(UNIT, M(c));
+  m.scale.set(w, h, d); m.position.set(x, y, z);
+  m.castShadow = shadow; m.receiveShadow = true;
+  (parent || scene).add(m); return m;
+}
+function group(parent, x = 0, y = 0, z = 0) { const g = new THREE.Group(); g.position.set(x, y, z); (parent || scene).add(g); return g; }
+function hash(x, y, z) {
+  let n = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1274126177)) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
+function voxels(parent, s, r, fn, ox = 0, oy = 0, oz = 0) {
+  const pts = [];
+  for (let x = r[0]; x <= r[1]; x++) for (let y = r[2]; y <= r[3]; y++) for (let z = r[4]; z <= r[5]; z++) { const c = fn(x, y, z); if (c) pts.push([x, y, z, c]); }
+  const mesh = new THREE.InstancedMesh(UNIT, new THREE.MeshLambertMaterial({ color: "#ffffff" }), pts.length);
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  pts.forEach((p, i) => { m.makeScale(s, s, s); m.setPosition(p[0] * s + ox, p[1] * s + oy, p[2] * s + oz); mesh.setMatrixAt(i, m); col.set(p[3]).multiplyScalar(0.95 + hash(p[0], p[1], p[2]) * 0.08); mesh.setColorAt(i, col); });
+  mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+
+/* ---------- Voxel characters (from the "Estudante Voxel" and "Enfermeira Voxel" artifacts) ---------- */
+const VS = 0.055;
+function voxelKit() {
+  const V = new Map(), K = (x, y, z) => x + "," + y + "," + z;
+  const kit = {
+    V, K, track: null, part: "body",
+    set(x, y, z, c) { V.set(K(x, y, z), { x, y, z, c, p: kit.part }); if (kit.track) kit.track.add(K(x, y, z)); },
+    del(x, y, z) { V.delete(K(x, y, z)); },
+    has(x, y, z) { return V.has(K(x, y, z)); },
+    box(x0, x1, y0, y1, z0, z1, c) { for (let x = x0; x < x1; x++) for (let y = y0; y < y1; y++) for (let z = z0; z < z1; z++) kit.set(x, y, z, typeof c === "function" ? c(x, y, z) : c); },
+    pick(arr, x, y, z) { return arr[Math.floor(hash(x, y, z) * arr.length)]; },
+    erode(keys) { const kill = []; keys.forEach(k => { const v = V.get(k); if (!v) return; const { x, y, z } = v; const n = kit.has(x + 1, y, z) + kit.has(x - 1, y, z) + kit.has(x, y + 1, z) + kit.has(x, y - 1, z) + kit.has(x, y, z + 1) + kit.has(x, y, z - 1); if (n <= 3) kill.push(k); }); kill.forEach(k => V.delete(k)); }
+  };
+  return kit;
+}
+function rigFrom(kit, PIVOT, scale = VS) {
+  const { V, K } = kit;
+  const same = (p, x, y, z) => { const n = V.get(K(x, y, z)); return !!n && n.p === p; };
+  const mat = new THREE.MeshLambertMaterial({ color: "#ffffff" }), m4 = new THREE.Matrix4(), col = new THREE.Color();
+  const outer = new THREE.Group(), model = new THREE.Group(); model.scale.setScalar(scale); outer.add(model);
+  const rig = {};
+  for (const p of Object.keys(PIVOT)) {
+    const vis = [...V.values()].filter(v => v.p === p && !(same(p, v.x + 1, v.y, v.z) && same(p, v.x - 1, v.y, v.z) && same(p, v.x, v.y + 1, v.z) && same(p, v.x, v.y - 1, v.z) && same(p, v.x, v.y, v.z + 1) && same(p, v.x, v.y, v.z - 1)));
+    const [px, py, pz] = PIVOT[p];
+    const mesh = new THREE.InstancedMesh(UNIT, mat, vis.length); mesh.castShadow = true;
+    vis.forEach((v, i) => { m4.makeTranslation(v.x + .5 - px, v.y + .5 - py, v.z + .5 - pz); mesh.setMatrixAt(i, m4); col.setHex(v.c).multiplyScalar(.95 + hash(v.x + 7, v.y - 3, v.z + 11) * .08); mesh.setColorAt(i, col); });
+    const g = new THREE.Group(); g.position.set(px, py, pz); g.add(mesh);
+    (p === "body" ? model : rig.body).add(g); rig[p] = g;
+  }
+  return { g: outer, rig };
+}
+function buildStudent(opts = {}) {
+  const k = voxelKit(), C = {
+    skin: 0xf0c49e, skinSh: 0xdcab84, ear: 0xd39c78, eye: 0x121212, mouth: 0xb86b5a, hair: [0x5b3a21, 0x6a452a, 0x7a5233], hairHi: [0x7d5636, 0x8d6440, 0x6e4a2d], brow: 0x4a2f1b,
+    gDark: 0x2c5db5, gMid: 0x8eaee6, gWhite: 0xf3f6fb, cuff: 0xc5d5f0, button: 0xfdfdfd, pants: 0xd8caad, pantsSh: 0xc5b591, belt: 0x3a2b20, buckle: 0x9da3ab,
+    shoe: 0xf1f1ee, sole: 0x8f9196, shoeLine: 0x2c5db5, bp: 0x2f72d4, bpSh: 0x2763bd, bpPocket: 0x2457ad, zip: 0x18191c, pull: 0xa7adb5, strap: 0x1d1e22
+  };
+  const ging = (x, y, z) => { const a = ((x + z) & 1) === 0, b = (y & 1) === 0; return a && b ? C.gDark : (a || b ? C.gMid : C.gWhite); };
+  const pants = (x, y, z) => hash(x, y, z) < .28 ? C.pantsSh : C.pants;
+  for (const xs of [-5, 0]) {
+    k.part = xs < 0 ? "legR" : "legL";
+    k.box(xs, xs + 5, 0, 1, -3, 4, C.sole); k.box(xs, xs + 5, 1, 3, -3, 4, C.shoe);
+    k.del(xs, 2, 3); k.del(xs + 4, 2, 3);
+    const outer = xs < 0 ? xs : xs + 4;
+    for (let z = -2; z < 3; z++) k.set(outer, 1, z, C.shoeLine);
+    k.box(xs, xs + 5, 3, 8, -3, 3, pants);
+    for (let y = 3; y < 8; y++) k.set(xs < 0 ? -1 : 0, y, 2, C.pantsSh);
+  }
+  k.part = "body";
+  k.box(-6, 6, 8, 10, -3, 4, pants); k.box(-6, 6, 10, 11, -3, 4, C.belt);
+  k.set(-1, 10, 4, C.buckle); k.set(0, 10, 4, C.buckle);
+  k.box(-6, 6, 11, 18, -3, 4, ging);
+  for (let y = 11; y < 18; y++) k.set(0, y, 3, (y & 1) ? C.gWhite : C.gMid);
+  for (const y of [12, 14, 16]) k.set(0, y, 4, C.button);
+  k.box(-5, 5, 17, 18, -3, 4, C.gWhite);
+  k.set(-1, 17, 3, C.skin); k.set(0, 17, 3, C.skin);
+  k.set(-3, 17, 4, C.gWhite); k.set(-2, 16, 4, C.gWhite); k.set(2, 17, 4, C.gWhite); k.set(1, 16, 4, C.gWhite);
+  for (const [x0, x1] of [[-10, -6], [6, 10]]) {
+    k.part = x0 < 0 ? "armR" : "armL";
+    k.box(x0, x1, 14, 18, -2, 2, ging);
+    k.box(x0 - (x0 < 0 ? 1 : 0), x1 + (x0 > 0 ? 1 : 0), 13, 14, -3, 3, C.cuff);
+    k.box(x0, x1, 9, 13, -2, 2, C.skin); k.box(x0, x1, 7, 9, -2, 2, C.skinSh);
+  }
+  k.part = "body";
+  k.box(-8, 8, 18, 32, -6, 7, C.skin);
+  for (let x = -8; x < 8; x++) for (let y = 18; y < 32; y++) for (let z = -6; z < 7; z++) { const b = (x === -8 || x === 7) + (y === 18 || y === 31) + (z === -6 || z === 6); if (b >= 2) k.del(x, y, z); }
+  k.box(-9, -8, 21, 25, -1, 2, C.skin); k.box(8, 9, 21, 25, -1, 2, C.skin);
+  k.set(-9, 22, 0, C.ear); k.set(-9, 23, 0, C.ear); k.set(8, 22, 0, C.ear); k.set(8, 23, 0, C.ear);
+  if (opts.eyesClosed) { k.box(-5, -2, 23, 24, 6, 7, C.eye); k.box(2, 5, 23, 24, 6, 7, C.eye); k.box(-1, 1, 20, 21, 6, 7, C.mouth); }
+  else { k.box(-5, -3, 22, 25, 6, 7, C.eye); k.box(3, 5, 22, 25, 6, 7, C.eye); k.box(-2, 2, 20, 21, 6, 7, C.mouth); k.set(-3, 21, 6, C.mouth); k.set(2, 21, 6, C.mouth); }
+  k.box(-6, -3, 26, 27, 6, 7, C.brow); k.box(3, 6, 26, 27, 6, 7, C.brow);
+  const hairKeys = new Set(); k.track = hairKeys;
+  const hair = (x, y, z) => y >= 33 ? k.pick(C.hairHi, x, y, z) : k.pick(C.hair, x, y, z);
+  k.box(-9, 9, 29, 34, -7, 7, hair); k.box(-9, 9, 21, 29, -7, -1, hair);
+  for (const sx of [-9, 8]) k.box(sx, sx + 1, 25, 29, -7, 5, hair);
+  for (const sx of [-9, 8]) k.box(sx, sx + 1, 22, 25, 2, 4, hair);
+  k.box(-8, 8, 30, 34, 7, 8, hair);
+  for (let x = -8; x < 8; x++) if (hash(x, 29, 7) > .55) k.set(x, 29, 7, hair(x, 29, 7));
+  k.box(-8, 8, 34, 35, -5, 8, hair); k.box(-7, 7, 35, 36, -1, 9, hair); k.box(-5, 6, 36, 37, 3, 9, hair); k.box(-6, 7, 31, 35, 8, 9, hair);
+  k.track = null; k.erode(hairKeys);
+  if (!opts.noBackpack) {
+    const bpKeys = new Set(); k.track = bpKeys;
+    k.box(-5, 7, 9, 18, -8, -3, (x, y, z) => hash(x, y, z) < .22 ? C.bpSh : C.bp);
+    k.track = null; k.erode(bpKeys);
+    for (let y = 10; y < 17; y++) { k.set(-5, y, -6, C.zip); k.set(6, y, -6, C.zip); }
+    for (let x = -4; x < 6; x++) k.set(x, 17, -6, C.zip);
+    k.box(-3, 5, 10, 15, -9, -8, C.bpPocket); k.box(-3, 5, 14, 15, -9, -8, C.zip);
+    k.set(3, 13, -10, C.pull); k.set(0, 18, -7, C.strap); k.set(1, 18, -7, C.strap);
+    k.box(3, 5, 11, 18, 4, 5, C.strap); k.set(3, 13, 4, C.pull); k.set(4, 13, 4, C.pull);
+  }
+  return rigFrom(k, { body: [0, 0, 0], armR: [-8, 17, 0], armL: [8, 17, 0], legR: [-2.5, 8, 0.5], legL: [2.5, 8, 0.5] });
+}
+/* Enfermeira Voxel: voxels rebuilt from enfermeira-voxel.obj / .mtl (3332 voxels, 0.1 per voxel in the file) */
+const NURSE_PAL = ["#c9c4c6","#f6f4f2","#f3c7a8","#e58799","#f4aab7","#ea98a8","#4a7cb6","#5a8fcb","#c3c9d1","#2c3138","#f8c2cc","#e2ad8c","#4a3d37","#f09a9c","#1a1012","#352b27","#2a1f1c","#ffffff","#40342f","#c0606a","#3c312c","#2a2220","#52443d","#ec9fae","#f5b6c1","#f6f6f8"];
+const NURSE_VOX = [-4,0,-2,0,-4,0,-1,0,-4,0,0,0,-4,0,1,0,-4,0,2,0,-3,0,-2,0,-3,0,-1,0,-3,0,0,0,-3,0,1,0,-3,0,2,0,-2,0,-2,0,-2,0,-1,0,-2,0,0,0,-2,0,1,0,-2,0,2,0,-1,0,-2,0,-1,0,-1,0,-1,0,0,0,-1,0,1,0,-1,0,2,0,0,0,-2,0,0,0,-1,0,0,0,0,0,0,0,1,0,0,0,2,0,1,0,-2,0,1,0,-1,0,1,0,0,0,1,0,1,0,1,0,2,0,2,0,-2,0,2,0,-1,0,2,0,0,0,2,0,1,0,2,0,2,0,3,0,-2,0,3,0,-1,0,3,0,0,0,3,0,1,0,3,0,2,0,-4,1,-2,1,-4,1,-1,1,-4,1,0,1,-4,1,1,1,-4,1,2,1,-3,1,-2,1,-3,1,1,1,-3,1,2,1,-2,1,-2,1,-2,1,1,1,-2,1,2,1,-1,1,-2,1,-1,1,-1,1,-1,1,0,1,-1,1,1,1,-1,1,2,1,0,1,-2,1,0,1,-1,1,0,1,0,1,0,1,1,1,0,1,2,1,1,1,-2,1,1,1,1,1,1,1,2,1,2,1,-2,1,2,1,1,1,2,1,2,1,3,1,-2,1,3,1,-1,1,3,1,0,1,3,1,1,1,3,1,2,1,-3,2,-1,2,-3,2,0,2,-3,3,-1,2,-3,3,0,2,-2,2,-1,2,-2,2,0,2,-2,3,-1,2,-2,3,0,2,1,2,-1,2,1,2,0,2,1,3,-1,2,1,3,0,2,2,2,-1,2,2,2,0,2,2,3,-1,2,2,3,0,2,-1,16,2,2,-1,17,2,2,0,16,2,2,0,17,2,2,1,17,2,2,-8,9,-1,2,-8,9,0,2,-8,9,1,2,-8,10,-1,2,-8,10,0,2,-8,10,1,2,-8,11,-1,2,-8,11,0,2,-8,11,1,2,-8,12,-1,2,-8,12,0,2,-8,12,1,2,-8,13,-1,2,-8,13,0,2,-8,13,1,2,-7,9,-1,2,-7,9,1,2,-7,10,-1,2,-7,10,1,2,-7,11,-1,2,-7,11,1,2,-7,12,-1,2,-7,12,1,2,-7,13,-1,2,-7,13,1,2,-6,9,-1,2,-6,9,1,2,-6,10,-1,2,-6,10,1,2,-6,11,-1,2,-6,11,1,2,-6,12,-1,2,-6,12,1,2,-6,13,-1,2,-6,13,1,2,5,9,-1,2,5,9,1,2,5,10,-1,2,5,10,1,2,5,11,-1,2,5,11,1,2,5,12,-1,2,5,12,1,2,5,13,-1,2,5,13,1,2,6,9,-1,2,6,9,1,2,6,10,-1,2,6,10,1,2,6,11,-1,2,6,11,1,2,6,12,-1,2,6,12,1,2,6,13,-1,2,6,13,1,2,7,9,-1,2,7,9,0,2,7,9,1,2,7,10,-1,2,7,10,0,2,7,10,1,2,7,11,-1,2,7,11,0,2,7,11,1,2,7,12,-1,2,7,12,0,2,7,12,1,2,7,13,-1,2,7,13,0,2,7,13,1,2,-6,19,-1,2,-6,19,0,2,-6,19,1,2,-6,19,2,2,-6,19,3,2,-6,19,4,2,-6,20,4,2,-6,21,4,2,-6,22,4,2,-6,23,4,2,-6,24,4,2,-6,25,4,2,-5,18,-1,2,-5,18,0,2,-5,18,1,2,-5,18,2,2,-5,18,3,2,-5,18,4,2,-5,19,5,2,-5,21,5,2,-5,22,5,2,-5,23,5,2,-5,25,5,2,-4,18,3,2,-4,18,4,2,-4,19,5,2,-4,24,5,2,-3,18,4,2,-3,19,5,2,-3,20,5,2,-3,24,5,2,-2,18,4,2,-2,19,5,2,-2,21,5,2,-2,22,5,2,-2,23,5,2,-2,24,5,2,-2,25,5,2,-1,18,3,2,-1,18,4,2,-1,20,5,2,-1,21,5,2,-1,22,5,2,-1,23,5,2,-1,24,5,2,-1,25,5,2,0,18,3,2,0,18,4,2,0,20,5,2,0,21,5,2,0,22,5,2,0,23,5,2,0,24,5,2,0,25,5,2,1,18,3,2,1,18,4,2,1,19,5,2,1,21,5,2,1,22,5,2,1,23,5,2,1,24,5,2,1,25,5,2,2,18,4,2,2,19,5,2,2,20,5,2,2,24,5,2,3,18,4,2,3,19,5,2,3,24,5,2,4,18,-1,2,4,18,0,2,4,18,1,2,4,18,2,2,4,18,3,2,4,18,4,2,4,19,5,2,4,21,5,2,4,22,5,2,4,23,5,2,4,25,5,2,5,19,-1,2,5,19,0,2,5,19,1,2,5,19,2,2,5,19,3,2,5,19,4,2,5,20,4,2,5,21,4,2,5,22,4,2,5,23,4,2,5,24,4,2,5,25,4,2,-6,4,-2,3,-6,4,-1,3,-6,4,0,3,-6,4,1,3,-6,4,2,3,-5,4,-3,3,-5,4,3,3,-4,4,-3,3,-4,4,3,3,-3,4,-3,3,-3,4,3,3,-2,4,-3,3,-2,4,3,3,-1,4,-3,3,-1,4,3,3,0,4,-3,3,0,4,3,3,1,4,-3,3,1,4,3,3,2,4,-3,3,2,4,3,3,3,4,-3,3,3,4,3,3,4,4,-3,3,4,4,3,3,5,4,-2,3,5,4,-1,3,5,4,0,3,5,4,1,3,5,4,2,3,-6,4,3,3,-6,4,-3,3,5,4,3,3,5,4,-3,3,-5,11,-2,3,-5,11,2,3,-4,11,-2,3,-3,11,-2,3,-2,11,-2,3,-2,11,2,3,-1,11,-2,3,-1,11,2,3,0,11,-2,3,0,11,2,3,1,11,-2,3,1,11,2,3,2,11,-2,3,2,11,2,3,3,11,-2,3,3,11,2,3,4,11,-2,3,4,11,2,3,-2,16,2,3,-1,15,2,3,0,15,2,3,1,16,2,3,2,13,3,3,3,13,3,3,-6,5,-3,4,-6,5,-1,4,-6,5,0,4,-6,5,1,4,-6,5,3,4,-6,6,-3,4,-6,6,-1,4,-6,6,1,4,-6,6,2,4,-6,6,3,4,-6,7,-3,4,-6,7,-2,4,-6,7,2,4,-6,7,3,4,-6,8,-2,4,-6,8,2,4,-5,4,-2,4,-5,4,1,4,-5,4,2,4,-5,5,-3,4,-5,5,3,4,-5,6,-3,4,-5,6,3,4,-5,7,-3,4,-5,7,3,4,-5,8,-3,4,-5,8,3,4,-4,4,-1,4,-4,4,0,4,-4,4,2,4,-4,5,3,4,-4,6,-3,4,-4,7,-3,4,-4,8,-3,4,-4,8,3,4,-3,4,-2,4,-3,4,1,4,-3,4,2,4,-3,5,-3,4,-3,5,3,4,-3,6,-3,4,-3,8,3,4,-2,4,-2,4,-2,4,1,4,-2,5,3,4,-2,7,3,4,-2,8,-3,4,-2,8,3,4,-1,4,-2,4,-1,4,-1,4,-1,4,2,4,-1,5,-3,4,-1,5,3,4,-1,6,3,4,-1,7,-3,4,-1,8,-3,4,-1,8,3,4,0,4,-2,4,0,4,0,4,0,5,-3,4,0,5,3,4,0,6,-3,4,0,6,3,4,0,7,-3,4,0,7,3,4,0,8,-3,4,0,8,3,4,1,4,-2,4,1,4,1,4,1,5,-3,4,1,5,3,4,1,6,-3,4,1,7,-3,4,1,7,3,4,1,8,-3,4,1,8,3,4,2,4,2,4,2,5,3,4,2,6,-3,4,2,7,3,4,2,8,3,4,3,4,-2,4,3,4,-1,4,3,4,1,4,3,5,-3,4,3,5,3,4,3,6,-3,4,3,6,3,4,3,7,-3,4,3,8,-3,4,3,8,3,4,4,4,-2,4,4,4,-1,4,4,4,1,4,4,4,2,4,4,5,-3,4,4,6,-3,4,4,8,3,4,5,5,-3,4,5,5,-2,4,5,5,-1,4,5,5,0,4,5,5,1,4,5,5,3,4,5,6,-3,4,5,6,-1,4,5,6,0,4,5,6,1,4,5,7,-3,4,5,7,-2,4,5,7,2,4,5,7,3,4,5,8,-2,4,-5,10,-1,4,-5,10,1,4,-4,9,-2,4,-4,10,-2,4,-4,10,2,4,-3,9,-2,4,-3,10,-2,4,-3,10,2,4,-2,9,-2,4,-2,9,2,4,-2,10,-2,4,-2,10,2,4,-1,9,2,4,-1,10,-2,4,-1,10,2,4,0,9,2,4,0,10,-2,4,0,10,2,4,1,9,-2,4,1,9,2,4,1,10,-2,4,1,10,2,4,2,9,-2,4,2,9,2,4,2,10,-2,4,2,10,2,4,3,9,2,4,3,10,2,4,4,10,1,4,-5,12,-2,4,-5,12,2,4,-5,13,-2,4,-5,13,2,4,-5,14,-2,4,-5,14,2,4,-5,15,2,4,-5,16,2,4,-5,17,-2,4,-5,17,2,4,-4,12,-2,4,-4,13,-2,4,-4,14,-2,4,-4,14,2,4,-4,15,-2,4,-4,15,2,4,-4,16,-2,4,-4,16,2,4,-4,17,-2,4,-4,17,2,4,-3,12,-2,4,-3,13,-2,4,-3,14,-2,4,-3,15,-2,4,-3,16,-2,4,-3,17,-2,4,-2,12,-2,4,-2,13,-2,4,-2,14,-2,4,-2,14,2,4,-2,15,-2,4,-2,15,2,4,-2,16,-2,4,-2,17,-2,4,-1,12,-2,4,-1,12,2,4,-1,13,-2,4,-1,13,2,4,-1,14,2,4,-1,16,-2,4,0,12,2,4,0,13,-2,4,0,13,2,4,0,14,-2,4,0,14,2,4,0,15,-2,4,0,16,-2,4,0,17,-2,4,1,12,-2,4,1,13,2,4,1,14,-2,4,1,14,2,4,1,17,-2,4,2,12,-2,4,2,13,-2,4,2,14,-2,4,2,14,2,4,2,15,-2,4,2,15,2,4,2,17,-2,4,3,12,-2,4,3,13,-2,4,3,14,2,4,3,15,-2,4,3,16,-2,4,3,17,-2,4,4,12,-2,4,4,12,2,4,4,14,2,4,4,15,2,4,4,16,-2,4,4,17,-2,4,-8,15,-1,4,-8,15,0,4,-8,15,1,4,-8,16,-1,4,-8,16,0,4,-8,16,1,4,-8,17,-1,4,-8,17,1,4,-7,15,-1,4,-7,15,1,4,-7,16,-1,4,-7,16,1,4,-7,17,-1,4,-7,17,0,4,-6,15,-1,4,-6,15,1,4,-6,16,-1,4,-6,16,1,4,-6,17,-1,4,-6,17,0,4,5,15,-1,4,5,15,1,4,5,16,1,4,5,17,-1,4,5,17,0,4,5,17,1,4,6,15,-1,4,6,15,1,4,6,16,-1,4,6,17,-1,4,6,17,0,4,6,17,1,4,7,15,-1,4,7,15,0,4,7,16,-1,4,7,16,1,4,7,17,-1,4,-6,5,-2,5,-6,5,2,5,-6,6,-2,5,-6,6,0,5,-5,4,-1,5,-5,4,0,5,-4,4,-2,5,-4,4,1,5,-4,5,-3,5,-3,7,-3,5,-3,8,-3,5,-2,4,2,5,-2,5,-3,5,-2,6,-3,5,-2,6,3,5,-2,7,-3,5,-1,4,0,5,-1,4,1,5,-1,6,-3,5,-1,7,3,5,0,4,-1,5,0,4,1,5,0,4,2,5,1,4,2,5,1,6,3,5,2,4,-2,5,2,4,1,5,2,5,-3,5,2,6,3,5,2,7,-3,5,2,8,-3,5,3,4,0,5,3,4,2,5,3,7,3,5,4,4,0,5,4,5,3,5,4,6,3,5,4,7,-3,5,4,7,3,5,4,8,-3,5,5,5,2,5,5,6,-2,5,5,6,2,5,5,6,3,5,5,8,2,5,-5,9,-2,5,-5,9,2,5,-4,9,2,5,-3,9,2,5,-1,9,-2,5,0,9,-2,5,3,9,-2,5,3,10,-2,5,4,9,-2,5,4,9,2,5,4,10,-1,5,-4,6,4,5,-4,7,4,5,-3,6,4,5,-3,7,4,5,-5,15,-2,5,-5,16,-2,5,-2,12,2,5,-2,13,2,5,-1,14,-2,5,-1,15,-2,5,-1,17,-2,5,0,12,-2,5,1,12,2,5,1,13,-2,5,1,15,-2,5,1,15,2,5,1,16,-2,5,2,16,-2,5,2,16,2,5,3,14,-2,5,4,13,-2,5,4,13,2,5,4,14,-2,5,4,15,-2,5,4,16,2,5,4,17,2,5,2,12,3,5,3,12,3,5,-8,17,0,5,-7,17,1,5,-6,17,1,5,5,16,-1,5,6,16,1,5,7,15,1,5,7,16,0,5,7,17,0,5,7,17,1,5,-3,14,3,6,-3,16,3,6,3,16,3,6,-3,15,3,7,-3,17,3,7,-2,17,3,7,3,15,3,7,3,17,3,7,2,17,3,7,-5,11,3,8,-5,12,3,8,-5,13,3,8,-4,11,3,8,-4,13,3,8,-3,11,3,8,-3,12,3,8,-3,13,3,8,3,14,4,8,4,13,4,8,4,12,4,8,-4,12,4,9,3,12,4,9,-5,12,4,10,-3,12,4,10,-9,14,-2,10,-9,14,-1,10,-9,14,0,10,-9,14,1,10,-9,14,2,10,-8,14,-2,10,-8,14,2,10,-7,14,-2,10,-7,14,2,10,-6,14,-2,10,-6,14,2,10,5,14,-2,10,5,14,2,10,6,14,-2,10,6,14,2,10,7,14,-2,10,7,14,2,10,8,14,-2,10,8,14,-1,10,8,14,0,10,8,14,1,10,8,14,2,10,-8,7,-1,11,-8,7,0,11,-8,7,1,11,-8,8,-1,11,-8,8,0,11,-8,8,1,11,-7,7,-1,11,-7,7,0,11,-7,7,1,11,-7,8,-1,11,-7,8,1,11,6,7,-1,11,6,7,0,11,6,7,1,11,6,8,-1,11,6,8,1,11,7,7,-1,11,7,7,0,11,7,7,1,11,7,8,-1,11,7,8,0,11,7,8,1,11,-5,18,-4,12,-5,18,-3,12,-4,18,-4,12,-3,18,-3,12,0,18,-4,12,0,18,-3,12,-7,26,-3,12,-7,27,-1,12,-7,27,0,12,-7,27,2,12,-6,27,-6,12,-5,26,-6,12,-4,27,-6,12,-4,28,-6,12,-1,28,-6,12,1,27,-6,12,2,26,-6,12,3,27,-6,12,3,28,-6,12,4,28,-6,12,5,28,-6,12,6,26,-6,12,6,26,0,12,6,26,1,12,6,26,2,12,6,26,3,12,6,27,-5,12,6,27,0,12,6,27,2,12,-7,23,-5,12,-7,24,-5,12,-7,24,-4,12,-7,24,-3,12,-6,18,-6,12,-6,18,-4,12,-6,18,-3,12,-4,18,-6,12,-4,22,-6,12,-3,18,-5,12,-3,21,-6,12,-3,23,-6,12,-3,24,-6,12,-2,18,-5,12,-2,21,-6,12,-1,19,-6,12,-1,20,-6,12,-1,23,-6,12,0,25,-6,12,1,21,-6,12,1,23,-6,12,2,18,-6,12,3,18,-5,12,4,18,-6,12,4,18,-5,12,4,22,-6,12,4,25,-6,12,5,18,-6,12,5,22,-6,12,5,25,-6,12,6,19,-5,12,6,23,-4,12,6,23,-3,12,6,23,-2,12,6,24,-6,12,6,24,-5,12,6,25,-6,12,6,25,-5,12,6,25,-2,12,-7,19,-1,12,-7,19,0,12,-7,19,1,12,-7,22,0,12,-7,24,-1,12,-7,25,-1,12,-7,25,0,12,-7,25,3,12,6,19,1,12,6,20,2,12,6,21,2,12,6,22,-1,12,6,25,0,12,6,25,1,12,-8,19,-4,12,-8,19,-1,12,-8,20,0,12,-8,21,-4,12,-6,27,6,12,-4,27,6,12,-1,26,6,12,-1,27,6,12,1,27,6,12,-5,20,5,13,-4,20,5,13,3,20,5,13,4,20,5,13,-5,24,5,14,-4,21,5,14,-4,22,5,14,-4,23,5,14,-3,21,5,14,-3,22,5,14,2,21,5,14,2,22,5,14,2,23,5,14,3,21,5,14,3,22,5,14,4,24,5,14,-4,18,-3,15,-3,18,-4,15,-2,18,-3,15,-1,18,-4,15,3,18,-4,15,4,18,-3,15,-7,18,-4,15,-7,19,-6,15,-7,19,-5,15,-7,20,-6,15,-7,22,-5,15,-7,22,-2,15,-7,23,-6,15,-7,23,-3,15,-7,23,-2,15,-7,24,-2,15,-7,25,-4,15,-7,25,-2,15,-6,22,-6,15,-6,23,-6,15,-6,24,-6,15,-6,25,-6,15,-5,18,-6,15,-5,20,-6,15,-5,22,-6,15,-5,23,-6,15,-4,25,-6,15,-2,19,-6,15,-2,20,-6,15,-2,22,-6,15,-1,22,-6,15,-1,24,-6,15,-1,25,-6,15,0,20,-6,15,0,23,-6,15,0,24,-6,15,1,18,-6,15,1,19,-6,15,1,25,-6,15,2,23,-6,15,3,18,-6,15,3,19,-6,15,3,22,-6,15,3,24,-6,15,4,19,-6,15,4,21,-6,15,4,24,-6,15,5,18,-4,15,5,19,-6,15,5,20,-6,15,6,18,-4,15,6,18,-3,15,6,21,-6,15,6,21,-5,15,6,22,-6,15,6,22,-4,15,6,23,-5,15,6,24,-3,15,-7,20,2,15,-7,22,1,15,-7,23,1,15,-7,25,1,15,6,19,-1,15,6,19,0,15,6,21,1,15,6,21,3,15,6,22,0,15,6,22,1,15,6,23,3,15,6,24,0,15,6,24,1,15,6,24,3,15,6,25,-1,15,6,25,2,15,-8,19,0,15,-8,20,-5,15,-8,20,-3,15,-8,21,-1,15,7,19,-4,15,7,19,0,15,7,20,-5,15,7,20,1,15,7,21,-4,15,7,21,-1,15,-4,25,5,16,-3,25,5,16,2,25,5,16,3,25,5,16,-3,23,5,17,3,23,5,17,-2,18,-4,18,-1,18,-3,18,1,18,-4,18,1,18,-3,18,2,18,-4,18,2,18,-3,18,-7,18,-5,18,-7,18,-3,18,-7,21,-6,18,-7,21,-5,18,-7,22,-4,18,-7,22,-3,18,-7,24,-6,18,-7,25,-6,18,-7,25,-3,18,-6,18,-2,18,-6,21,-6,18,-5,18,-5,18,-5,21,-6,18,-5,24,-6,18,-5,25,-6,18,-4,18,-5,18,-4,19,-6,18,-4,21,-6,18,-4,24,-6,18,-3,18,-6,18,-3,19,-6,18,-3,20,-6,18,-3,22,-6,18,-3,25,-6,18,-2,18,-6,18,-2,23,-6,18,-2,24,-6,18,-2,25,-6,18,-1,18,-6,18,0,18,-6,18,0,19,-6,18,0,22,-6,18,1,18,-5,18,1,22,-6,18,1,24,-6,18,2,18,-5,18,2,19,-6,18,2,21,-6,18,2,22,-6,18,2,24,-6,18,2,25,-6,18,3,20,-6,18,3,23,-6,18,3,25,-6,18,4,20,-6,18,4,23,-6,18,5,18,-5,18,5,18,-3,18,5,18,-2,18,5,21,-6,18,5,24,-6,18,6,18,-5,18,6,19,-6,18,6,19,-2,18,6,20,-6,18,6,22,-2,18,6,23,-6,18,6,24,-4,18,6,25,-3,18,-7,19,2,18,-7,21,1,18,-7,21,3,18,-7,22,-1,18,-7,22,2,18,-7,23,-1,18,-7,23,2,18,-7,23,3,18,-7,24,0,18,-7,24,1,18,-7,24,3,18,-7,25,2,18,6,19,2,18,6,20,3,18,6,22,3,18,6,23,-1,18,6,23,1,18,6,23,2,18,6,24,-1,18,6,24,2,18,6,25,3,18,-8,19,-3,18,-8,19,-2,18,-8,20,-4,18,-8,20,1,18,-8,21,-2,18,7,19,-3,18,7,19,-2,18,7,19,-1,18,7,20,-3,18,7,20,-1,18,7,20,0,18,7,21,-2,18,7,21,0,18,-2,20,5,19,-1,19,5,19,0,19,5,19,1,20,5,19,1,26,5,20,2,26,5,20,3,26,5,20,-7,26,-5,20,-7,26,-4,20,-7,26,0,20,-7,26,1,20,-7,26,3,20,-7,26,4,20,-7,27,-5,20,-7,27,-4,20,-7,27,-3,20,-7,27,-2,20,-7,27,3,20,-4,26,-6,20,-3,28,-6,20,-2,27,-6,20,-2,28,-6,20,-1,26,-6,20,-1,27,-6,20,0,26,-6,20,0,28,-6,20,2,28,-6,20,5,26,-6,20,5,27,-6,20,6,26,-5,20,6,26,-3,20,6,26,-1,20,6,26,4,20,6,27,-2,20,6,27,1,20,6,27,4,20,6,27,5,20,-5,27,6,20,-2,26,6,20,0,27,6,20,4,27,6,20,3,18,-3,21,4,18,-4,21,-7,19,-2,21,-7,22,-6,21,-7,23,-4,21,-7,25,-5,21,-6,18,-5,21,-6,19,-6,21,-6,20,-6,21,-5,19,-6,21,-4,20,-6,21,-4,23,-6,21,-1,18,-5,21,-1,21,-6,21,0,18,-5,21,0,21,-6,21,1,20,-6,21,2,20,-6,21,3,21,-6,21,5,23,-6,21,6,22,-5,21,6,22,-3,21,6,24,-2,21,6,25,-4,21,-7,20,3,21,-7,21,2,21,-7,22,3,21,-7,23,0,21,-7,24,2,21,6,22,2,21,6,23,0,21,-8,20,-2,21,-8,20,-1,21,-8,21,-3,21,-8,21,0,21,7,20,-4,21,7,20,-2,21,7,21,-3,21,4,26,5,22,-7,26,-6,22,-7,26,-2,22,-7,26,-1,22,-7,26,2,22,-7,27,-6,22,-7,27,1,22,-7,27,4,22,-7,27,5,22,-6,26,-6,22,-6,26,5,22,-6,28,-6,22,-5,27,-6,22,-5,28,-6,22,-3,26,-6,22,-3,27,-6,22,-2,26,-6,22,0,27,-6,22,1,26,-6,22,1,28,-6,22,2,27,-6,22,3,26,-6,22,4,26,-6,22,4,27,-6,22,5,26,5,22,5,27,5,22,6,26,-4,22,6,26,-2,22,6,27,-6,22,6,27,-4,22,6,27,-3,22,6,27,-1,22,6,27,3,22,-5,26,6,22,-4,26,6,22,-3,26,6,22,-3,27,6,22,-2,27,6,22,0,26,6,22,2,27,6,22,3,27,6,22,-7,28,-5,23,-7,28,-4,23,-7,28,-3,23,-7,28,-2,23,-7,28,-1,23,-7,28,0,23,-7,28,1,23,-7,28,2,23,-7,28,3,23,-7,28,4,23,6,28,-5,23,6,28,-4,23,6,28,-3,23,6,28,-2,23,6,28,-1,23,6,28,0,23,6,28,1,23,6,28,2,23,6,28,3,23,6,28,4,23,-5,28,6,23,-4,28,6,23,-3,28,6,23,-2,28,6,23,-1,28,6,23,0,28,6,23,1,28,6,23,2,28,6,23,3,28,6,23,4,28,6,23,-6,30,-4,23,-6,30,-3,23,-6,30,3,23,-6,31,-4,23,-6,32,-4,23,-6,32,1,23,-6,32,2,23,-6,33,-2,23,-6,33,0,23,-5,30,5,23,-5,33,-4,23,-5,33,-3,23,-4,31,-4,23,-4,32,-4,23,-3,33,-4,23,-3,33,1,23,-3,33,3,23,-3,33,5,23,-2,33,1,23,-1,31,-4,23,-1,33,-1,23,-1,33,3,23,0,32,-4,23,0,33,-4,23,0,33,-3,23,0,33,1,23,0,33,2,23,0,33,3,23,0,33,4,23,1,33,-2,23,1,33,5,23,3,32,5,23,3,33,5,23,4,30,-4,23,4,33,-3,23,4,33,-1,23,4,33,2,23,4,33,4,23,5,30,-3,23,5,30,-1,23,5,30,3,23,5,31,-4,23,5,31,1,23,5,31,2,23,5,31,5,23,5,33,-3,23,5,33,1,23,5,33,4,23,-7,28,5,23,-7,29,-4,23,-7,29,-3,23,-7,29,-2,23,-7,29,-1,23,-7,29,0,23,-7,29,1,23,-7,29,2,23,-7,29,3,23,-7,29,4,23,-7,29,5,23,-6,28,6,23,-6,29,-5,23,-6,29,6,23,-5,29,-5,23,-5,29,6,23,-4,29,-5,23,-4,29,6,23,-3,29,-5,23,-3,29,6,23,-2,29,-5,23,-2,29,6,23,-1,29,-5,23,-1,29,6,23,0,29,-5,23,0,29,6,23,1,29,-5,23,1,29,6,23,2,29,-5,23,2,29,6,23,3,29,-5,23,3,29,6,23,4,29,-5,23,4,29,6,23,5,28,6,23,5,29,-5,23,5,29,6,23,6,28,5,23,6,29,-4,23,6,29,-3,23,6,29,-2,23,6,29,-1,23,6,29,0,23,6,29,1,23,6,29,2,23,6,29,3,23,6,29,4,23,6,29,5,23,-6,30,-2,24,-6,30,-1,24,-6,30,0,24,-6,30,1,24,-6,30,2,24,-6,30,4,24,-6,30,5,24,-6,31,-3,24,-6,31,-2,24,-6,31,-1,24,-6,31,0,24,-6,31,1,24,-6,31,2,24,-6,31,3,24,-6,31,4,24,-6,31,5,24,-6,32,-3,24,-6,32,-2,24,-6,32,-1,24,-6,32,0,24,-6,32,3,24,-6,32,4,24,-6,32,5,24,-6,33,-3,24,-6,33,-1,24,-6,33,1,24,-6,33,2,24,-6,33,3,24,-6,33,4,24,-5,30,-4,24,-5,31,-4,24,-5,31,5,24,-5,32,-4,24,-5,32,5,24,-5,33,-2,24,-5,33,-1,24,-5,33,0,24,-5,33,1,24,-5,33,2,24,-5,33,3,24,-5,33,4,24,-5,33,5,24,-4,30,-4,24,-4,30,5,24,-4,31,5,24,-4,32,5,24,-4,33,-4,24,-4,33,-3,24,-4,33,-2,24,-4,33,-1,24,-4,33,0,24,-4,33,1,24,-4,33,2,24,-4,33,3,24,-4,33,4,24,-4,33,5,24,-3,30,-4,24,-3,30,5,24,-3,31,-4,24,-3,32,-4,24,-3,33,-3,24,-3,33,-2,24,-3,33,-1,24,-3,33,0,24,-3,33,2,24,-3,33,4,24,-2,30,-4,24,-2,30,5,24,-2,31,-4,24,-2,32,-4,24,-2,33,-4,24,-2,33,-3,24,-2,33,-2,24,-2,33,-1,24,-2,33,0,24,-2,33,2,24,-2,33,3,24,-2,33,4,24,-2,33,5,24,-1,30,-4,24,-1,32,-4,24,-1,33,-4,24,-1,33,-3,24,-1,33,-2,24,-1,33,0,24,-1,33,1,24,-1,33,2,24,-1,33,4,24,-1,33,5,24,0,30,-4,24,0,31,-4,24,0,33,-2,24,0,33,-1,24,0,33,0,24,0,33,5,24,1,30,-4,24,1,30,5,24,1,31,-4,24,1,32,-4,24,1,33,-4,24,1,33,-3,24,1,33,-1,24,1,33,0,24,1,33,1,24,1,33,2,24,1,33,3,24,1,33,4,24,2,30,-4,24,2,30,5,24,2,31,-4,24,2,32,-4,24,2,33,-4,24,2,33,-3,24,2,33,-2,24,2,33,-1,24,2,33,0,24,2,33,1,24,2,33,2,24,2,33,3,24,2,33,4,24,2,33,5,24,3,30,-4,24,3,30,5,24,3,31,-4,24,3,31,5,24,3,32,-4,24,3,33,-4,24,3,33,-3,24,3,33,-2,24,3,33,-1,24,3,33,0,24,3,33,1,24,3,33,2,24,3,33,3,24,3,33,4,24,4,30,5,24,4,31,-4,24,4,31,5,24,4,32,-4,24,4,32,5,24,4,33,-4,24,4,33,-2,24,4,33,0,24,4,33,1,24,4,33,3,24,4,33,5,24,5,30,-4,24,5,30,-2,24,5,30,0,24,5,30,1,24,5,30,2,24,5,30,4,24,5,30,5,24,5,31,-3,24,5,31,-2,24,5,31,-1,24,5,31,0,24,5,31,3,24,5,31,4,24,5,32,-4,24,5,32,-3,24,5,32,-2,24,5,32,-1,24,5,32,0,24,5,32,1,24,5,32,2,24,5,32,3,24,5,32,4,24,5,32,5,24,5,33,-2,24,5,33,-1,24,5,33,0,24,5,33,2,24,5,33,3,24,-1,30,6,25,-1,31,6,25,-1,32,6,25,-1,33,6,25,0,30,6,25,0,31,6,25,0,32,6,25,0,33,6,25,-3,31,6,25,-3,32,6,25,-2,31,6,25,-2,32,6,25,1,31,6,25,1,32,6,25,2,31,6,25,2,32,6,25,-3,1,-1,1,-2,1,-1,1,-3,1,0,1,-2,1,0,1,1,1,-1,1,2,1,-1,1,1,1,0,1,2,1,0,1,-3,16,2,4,3,16,2,4,-3,17,2,4,-2,17,2,4,2,17,2,4,3,17,2,4,-5,19,-1,12,-4,19,-1,12,-3,19,-1,12,-2,19,-1,12,-1,19,-1,12,0,19,-1,12,1,19,-1,12,2,19,-1,12,3,19,-1,12,4,19,-1,12,-5,19,0,15,-4,19,0,15,-3,19,0,15,-2,19,0,15,-1,19,0,15,0,19,0,15,1,19,0,15,2,19,0,15,3,19,0,15,4,19,0,15,-5,19,1,12,-4,19,1,12,-3,19,1,12,-2,19,1,12,-1,19,1,12,0,19,1,12,1,19,1,12,2,19,1,12,3,19,1,12,4,19,1,12,-5,19,2,18,-4,19,2,18,-3,19,2,18,-2,19,2,18,-1,19,2,18,0,19,2,18,1,19,2,18,2,19,2,18,3,19,2,18,4,19,2,18,-5,19,3,2,-4,19,3,2,-3,19,3,2,-2,19,3,2,-1,19,3,2,0,19,3,2,1,19,3,2,2,19,3,2,3,19,3,2,4,19,3,2,-5,19,4,2,-4,19,4,2,-3,19,4,2,-2,19,4,2,-1,19,4,2,0,19,4,2,1,19,4,2,2,19,4,2,3,19,4,2,4,19,4,2,-5,20,4,2,-4,20,4,2,-3,20,4,2,-2,20,4,2,-1,20,4,2,0,20,4,2,1,20,4,2,2,20,4,2,3,20,4,2,4,20,4,2,-5,21,4,2,-4,21,4,2,-3,21,4,2,-2,21,4,2,-1,21,4,2,0,21,4,2,1,21,4,2,2,21,4,2,3,21,4,2,4,21,4,2,-5,22,4,2,-4,22,4,2,-3,22,4,2,-2,22,4,2,-1,22,4,2,0,22,4,2,1,22,4,2,2,22,4,2,3,22,4,2,4,22,4,2,-5,23,4,2,-4,23,4,2,-3,23,4,2,-2,23,4,2,-1,23,4,2,0,23,4,2,1,23,4,2,2,23,4,2,3,23,4,2,4,23,4,2,-5,24,4,2,-4,24,4,2,-3,24,4,2,-2,24,4,2,-1,24,4,2,0,24,4,2,1,24,4,2,2,24,4,2,3,24,4,2,4,24,4,2,-5,25,4,2,-4,25,4,2,-3,25,4,2,-2,25,4,2,-1,25,4,2,0,25,4,2,1,25,4,2,2,25,4,2,3,25,4,2,4,25,4,2,-4,18,-1,2,-3,18,-1,2,-2,18,-1,2,-1,18,-1,2,0,18,-1,2,1,18,-1,2,2,18,-1,2,3,18,-1,2,-4,18,0,2,-3,18,0,2,-2,18,0,2,-1,18,0,2,0,18,0,2,1,18,0,2,2,18,0,2,3,18,0,2,-4,18,1,2,-3,18,1,2,-2,18,1,2,-1,18,1,2,0,18,1,2,1,18,1,2,2,18,1,2,3,18,1,2,-4,18,2,2,-3,18,2,2,-2,18,2,2,-1,18,2,2,0,18,2,2,1,18,2,2,2,18,2,2,3,18,2,2,-3,18,3,2,-2,18,3,2,2,18,3,2,3,18,3,2,-3,4,-1,3,-2,4,-1,3,1,4,-1,3,2,4,-1,3,-3,4,0,3,-2,4,0,3,1,4,0,3,2,4,0,3,-4,11,2,3,-3,11,2,3,-3,15,2,4,3,15,2,4,-2,13,3,8,-1,13,3,8,0,13,3,8,1,13,3,8,-5,5,-1,4,-4,5,-1,4,-3,5,-1,4,-2,5,-1,4,-1,5,-1,4,0,5,-1,4,1,5,-1,4,2,5,-1,4,3,5,-1,4,4,5,-1,4,-5,5,0,4,-4,5,0,4,-3,5,0,4,-2,5,0,4,-1,5,0,4,0,5,0,4,1,5,0,4,2,5,0,4,3,5,0,4,4,5,0,4,-5,5,1,4,-4,5,1,4,-3,5,1,4,-2,5,1,4,-1,5,1,4,0,5,1,4,1,5,1,4,2,5,1,4,3,5,1,4,4,5,1,4,-5,6,-1,4,-4,6,-1,4,-3,6,-1,4,-2,6,-1,4,-1,6,-1,4,0,6,-1,4,1,6,-1,4,2,6,-1,4,3,6,-1,4,4,6,-1,4,-5,6,1,4,-4,6,1,4,-3,6,1,4,-2,6,1,4,-1,6,1,4,0,6,1,4,1,6,1,4,2,6,1,4,3,6,1,4,4,6,1,4,-5,6,2,4,-4,6,2,4,-3,6,2,4,-2,6,2,4,-1,6,2,4,0,6,2,4,1,6,2,4,2,6,2,4,3,6,2,4,4,6,2,4,-4,6,3,4,-3,6,3,4,-5,7,-2,4,-4,7,-2,4,-3,7,-2,4,-2,7,-2,4,-1,7,-2,4,0,7,-2,4,1,7,-2,4,2,7,-2,4,3,7,-2,4,4,7,-2,4,-5,7,2,4,-4,7,2,4,-3,7,2,4,-2,7,2,4,-1,7,2,4,0,7,2,4,1,7,2,4,2,7,2,4,3,7,2,4,4,7,2,4,-4,7,3,4,-3,7,3,4,-5,8,-2,4,-4,8,-2,4,-3,8,-2,4,-2,8,-2,4,-1,8,-2,4,0,8,-2,4,1,8,-2,4,2,8,-2,4,3,8,-2,4,4,8,-2,4,-5,8,2,4,-4,8,2,4,-3,8,2,4,-2,8,2,4,-1,8,2,4,0,8,2,4,1,8,2,4,2,8,2,4,3,8,2,4,4,8,2,4,-5,5,-2,5,-4,5,-2,5,-3,5,-2,5,-2,5,-2,5,-1,5,-2,5,0,5,-2,5,1,5,-2,5,2,5,-2,5,3,5,-2,5,4,5,-2,5,-5,6,0,5,-4,6,0,5,-3,6,0,5,-2,6,0,5,-1,6,0,5,0,6,0,5,1,6,0,5,2,6,0,5,3,6,0,5,4,6,0,5,-4,10,-1,4,-3,10,-1,4,-2,10,-1,4,-1,10,-1,4,0,10,-1,4,1,10,-1,4,2,10,-1,4,3,10,-1,4,-4,10,1,4,-3,10,1,4,-2,10,1,4,-1,10,1,4,0,10,1,4,1,10,1,4,2,10,1,4,3,10,1,4,-4,12,2,4,-3,12,2,4,2,12,2,4,3,12,2,4,-4,13,2,4,-3,13,2,4,2,13,2,4,3,13,2,4,-3,14,2,4,-5,5,2,5,-4,5,2,5,-3,5,2,5,-2,5,2,5,-1,5,2,5,0,5,2,5,1,5,2,5,2,5,2,5,3,5,2,5,4,5,2,5,-5,6,-2,5,-4,6,-2,5,-3,6,-2,5,-2,6,-2,5,-1,6,-2,5,0,6,-2,5,1,6,-2,5,2,6,-2,5,3,6,-2,5,4,6,-2,5,-4,12,3,8,-2,12,3,8,-1,12,3,8,0,12,3,8,1,12,3,8,-2,16,3,6,-1,16,3,6,0,16,3,6,1,16,3,6,2,16,3,6,-2,15,3,7,-1,15,3,7,0,15,3,7,1,15,3,7,2,15,3,7,-1,17,3,7,0,17,3,7,1,17,3,7,-2,12,4,10,-1,12,4,10,0,12,4,10,1,12,4,10,2,12,4,10,-6,26,-3,12,-5,26,-3,12,-4,26,-3,12,-3,26,-3,12,-2,26,-3,12,-1,26,-3,12,0,26,-3,12,1,26,-3,12,2,26,-3,12,3,26,-3,12,4,26,-3,12,5,26,-3,12,-6,27,-1,12,-5,27,-1,12,-4,27,-1,12,-3,27,-1,12,-2,27,-1,12,-1,27,-1,12,0,27,-1,12,1,27,-1,12,2,27,-1,12,3,27,-1,12,4,27,-1,12,5,27,-1,12,-6,27,0,12,-5,27,0,12,-4,27,0,12,-3,27,0,12,-2,27,0,12,-1,27,0,12,0,27,0,12,1,27,0,12,2,27,0,12,3,27,0,12,4,27,0,12,5,27,0,12,-6,27,2,12,-5,27,2,12,-4,27,2,12,-3,27,2,12,-2,27,2,12,-1,27,2,12,0,27,2,12,1,27,2,12,2,27,2,12,3,27,2,12,4,27,2,12,5,27,2,12,-6,26,0,20,-5,26,0,20,-4,26,0,20,-3,26,0,20,-2,26,0,20,-1,26,0,20,0,26,0,20,1,26,0,20,2,26,0,20,3,26,0,20,4,26,0,20,5,26,0,20,-6,26,1,20,-5,26,1,20,-4,26,1,20,-3,26,1,20,-2,26,1,20,-1,26,1,20,0,26,1,20,1,26,1,20,2,26,1,20,3,26,1,20,4,26,1,20,5,26,1,20,-6,26,2,22,-5,26,2,22,-4,26,2,22,-3,26,2,22,-2,26,2,22,-1,26,2,22,0,26,2,22,1,26,2,22,2,26,2,22,3,26,2,22,4,26,2,22,5,26,2,22,-6,26,3,20,-5,26,3,20,-4,26,3,20,-3,26,3,20,-2,26,3,20,-1,26,3,20,0,26,3,20,1,26,3,20,2,26,3,20,3,26,3,20,4,26,3,20,5,26,3,20,-6,27,-5,20,-5,27,-5,20,-4,27,-5,20,-3,27,-5,20,-2,27,-5,20,-1,27,-5,20,0,27,-5,20,1,27,-5,20,2,27,-5,20,3,27,-5,20,4,27,-5,20,5,27,-5,20,-6,23,-5,12,-5,23,-5,12,-4,23,-5,12,-3,23,-5,12,-2,23,-5,12,-1,23,-5,12,0,23,-5,12,1,23,-5,12,2,23,-5,12,3,23,-5,12,4,23,-5,12,5,23,-5,12,-6,24,-5,12,-5,24,-5,12,-4,24,-5,12,-3,24,-5,12,-2,24,-5,12,-1,24,-5,12,0,24,-5,12,1,24,-5,12,2,24,-5,12,3,24,-5,12,4,24,-5,12,5,24,-5,12,-6,24,-4,12,-5,24,-4,12,-4,24,-4,12,-3,24,-4,12,-2,24,-4,12,-1,24,-4,12,0,24,-4,12,1,24,-4,12,2,24,-4,12,3,24,-4,12,4,24,-4,12,5,24,-4,12,-6,24,-3,12,-5,24,-3,12,-4,24,-3,12,-3,24,-3,12,-2,24,-3,12,-1,24,-3,12,0,24,-3,12,1,24,-3,12,2,24,-3,12,3,24,-3,12,4,24,-3,12,5,24,-3,12,-6,19,-5,15,-5,19,-5,15,-4,19,-5,15,-3,19,-5,15,-2,19,-5,15,-1,19,-5,15,0,19,-5,15,1,19,-5,15,2,19,-5,15,3,19,-5,15,4,19,-5,15,5,19,-5,15,-6,23,-4,21,-5,23,-4,21,-4,23,-4,21,-3,23,-4,21,-2,23,-4,21,-1,23,-4,21,0,23,-4,21,1,23,-4,21,2,23,-4,21,3,23,-4,21,4,23,-4,21,5,23,-4,21,-6,23,-3,15,-5,23,-3,15,-4,23,-3,15,-3,23,-3,15,-2,23,-3,15,-1,23,-3,15,0,23,-3,15,1,23,-3,15,2,23,-3,15,3,23,-3,15,4,23,-3,15,5,23,-3,15,-6,23,-2,15,-5,23,-2,15,-4,23,-2,15,-3,23,-2,15,-2,23,-2,15,-1,23,-2,15,0,23,-2,15,1,23,-2,15,2,23,-2,15,3,23,-2,15,4,23,-2,15,5,23,-2,15,-6,25,-5,21,-5,25,-5,21,-4,25,-5,21,-3,25,-5,21,-2,25,-5,21,-1,25,-5,21,0,25,-5,21,1,25,-5,21,2,25,-5,21,3,25,-5,21,4,25,-5,21,5,25,-5,21,-6,25,-2,15,-5,25,-2,15,-4,25,-2,15,-3,25,-2,15,-2,25,-2,15,-1,25,-2,15,0,25,-2,15,1,25,-2,15,2,25,-2,15,3,25,-2,15,4,25,-2,15,5,25,-2,15,-6,22,0,12,-5,22,0,12,-4,22,0,12,-3,22,0,12,-2,22,0,12,-1,22,0,12,0,22,0,12,1,22,0,12,2,22,0,12,3,22,0,12,4,22,0,12,5,22,0,12,-6,24,-1,12,-5,24,-1,12,-4,24,-1,12,-3,24,-1,12,-2,24,-1,12,-1,24,-1,12,0,24,-1,12,1,24,-1,12,2,24,-1,12,3,24,-1,12,4,24,-1,12,5,24,-1,12,-6,25,-1,12,-5,25,-1,12,-4,25,-1,12,-3,25,-1,12,-2,25,-1,12,-1,25,-1,12,0,25,-1,12,1,25,-1,12,2,25,-1,12,3,25,-1,12,4,25,-1,12,5,25,-1,12,-6,25,0,12,-5,25,0,12,-4,25,0,12,-3,25,0,12,-2,25,0,12,-1,25,0,12,0,25,0,12,1,25,0,12,2,25,0,12,3,25,0,12,4,25,0,12,5,25,0,12,-6,25,3,12,-5,25,3,12,-4,25,3,12,-3,25,3,12,-2,25,3,12,-1,25,3,12,0,25,3,12,1,25,3,12,2,25,3,12,3,25,3,12,4,25,3,12,5,25,3,12,-6,20,2,15,-5,20,2,15,-4,20,2,15,-3,20,2,15,-2,20,2,15,-1,20,2,15,0,20,2,15,1,20,2,15,2,20,2,15,3,20,2,15,4,20,2,15,5,20,2,15,-6,21,2,21,-5,21,2,21,-4,21,2,21,-3,21,2,21,-2,21,2,21,-1,21,2,21,0,21,2,21,1,21,2,21,2,21,2,21,3,21,2,21,4,21,2,21,5,21,2,21,-6,22,-1,18,-5,22,-1,18,-4,22,-1,18,-3,22,-1,18,-2,22,-1,18,-1,22,-1,18,0,22,-1,18,1,22,-1,18,2,22,-1,18,3,22,-1,18,4,22,-1,18,5,22,-1,18,-6,25,1,15,-5,25,1,15,-4,25,1,15,-3,25,1,15,-2,25,1,15,-1,25,1,15,0,25,1,15,1,25,1,15,2,25,1,15,3,25,1,15,4,25,1,15,5,25,1,15,-7,19,-4,12,-6,19,-4,12,-5,19,-4,12,-4,19,-4,12,-3,19,-4,12,-2,19,-4,12,-1,19,-4,12,0,19,-4,12,1,19,-4,12,2,19,-4,12,3,19,-4,12,4,19,-4,12,5,19,-4,12,6,19,-4,12,-7,20,0,12,-6,20,0,12,-5,20,0,12,-4,20,0,12,-3,20,0,12,-2,20,0,12,-1,20,0,12,0,20,0,12,1,20,0,12,2,20,0,12,3,20,0,12,4,20,0,12,5,20,0,12,6,20,0,12,-7,21,-4,12,-6,21,-4,12,-5,21,-4,12,-4,21,-4,12,-3,21,-4,12,-2,21,-4,12,-1,21,-4,12,0,21,-4,12,1,21,-4,12,2,21,-4,12,3,21,-4,12,4,21,-4,12,5,21,-4,12,6,21,-4,12,-6,22,-5,15,-5,22,-5,15,-4,22,-5,15,-3,22,-5,15,-2,22,-5,15,-1,22,-5,15,0,22,-5,15,1,22,-5,15,2,22,-5,15,3,22,-5,15,4,22,-5,15,5,22,-5,15,-6,22,-2,15,-5,22,-2,15,-4,22,-2,15,-3,22,-2,15,-2,22,-2,15,-1,22,-2,15,0,22,-2,15,1,22,-2,15,2,22,-2,15,3,22,-2,15,4,22,-2,15,5,22,-2,15,-6,24,-2,15,-5,24,-2,15,-4,24,-2,15,-3,24,-2,15,-2,24,-2,15,-1,24,-2,15,0,24,-2,15,1,24,-2,15,2,24,-2,15,3,24,-2,15,4,24,-2,15,5,24,-2,15,-6,25,-4,15,-5,25,-4,15,-4,25,-4,15,-3,25,-4,15,-2,25,-4,15,-1,25,-4,15,0,25,-4,15,1,25,-4,15,2,25,-4,15,3,25,-4,15,4,25,-4,15,5,25,-4,15,-6,21,-5,18,-5,21,-5,18,-4,21,-5,18,-3,21,-5,18,-2,21,-5,18,-1,21,-5,18,0,21,-5,18,1,21,-5,18,2,21,-5,18,3,21,-5,18,4,21,-5,18,5,21,-5,18,-6,22,-4,18,-5,22,-4,18,-4,22,-4,18,-3,22,-4,18,-2,22,-4,18,-1,22,-4,18,0,22,-4,18,1,22,-4,18,2,22,-4,18,3,22,-4,18,4,22,-4,18,5,22,-4,18,-6,22,1,15,-5,22,1,15,-4,22,1,15,-3,22,1,15,-2,22,1,15,-1,22,1,15,0,22,1,15,1,22,1,15,2,22,1,15,3,22,1,15,4,22,1,15,5,22,1,15,-6,23,1,15,-5,23,1,15,-4,23,1,15,-3,23,1,15,-2,23,1,15,-1,23,1,15,0,23,1,15,1,23,1,15,2,23,1,15,3,23,1,15,4,23,1,15,5,23,1,15,-6,21,1,18,-5,21,1,18,-4,21,1,18,-3,21,1,18,-2,21,1,18,-1,21,1,18,0,21,1,18,1,21,1,18,2,21,1,18,3,21,1,18,4,21,1,18,5,21,1,18,-6,21,3,18,-5,21,3,18,-4,21,3,18,-3,21,3,18,-2,21,3,18,-1,21,3,18,0,21,3,18,1,21,3,18,2,21,3,18,3,21,3,18,4,21,3,18,5,21,3,18,-6,23,3,18,-5,23,3,18,-4,23,3,18,-3,23,3,18,-2,23,3,18,-1,23,3,18,0,23,3,18,1,23,3,18,2,23,3,18,3,23,3,18,4,23,3,18,5,23,3,18,-6,24,0,18,-5,24,0,18,-4,24,0,18,-3,24,0,18,-2,24,0,18,-1,24,0,18,0,24,0,18,1,24,0,18,2,24,0,18,3,24,0,18,4,24,0,18,5,24,0,18,-6,24,1,18,-5,24,1,18,-4,24,1,18,-3,24,1,18,-2,24,1,18,-1,24,1,18,0,24,1,18,1,24,1,18,2,24,1,18,3,24,1,18,4,24,1,18,5,24,1,18,-6,24,3,18,-5,24,3,18,-4,24,3,18,-3,24,3,18,-2,24,3,18,-1,24,3,18,0,24,3,18,1,24,3,18,2,24,3,18,3,24,3,18,4,24,3,18,5,24,3,18,-6,25,2,18,-5,25,2,18,-4,25,2,18,-3,25,2,18,-2,25,2,18,-1,25,2,18,0,25,2,18,1,25,2,18,2,25,2,18,3,25,2,18,4,25,2,18,5,25,2,18,-7,20,-5,15,-6,20,-5,15,-5,20,-5,15,-4,20,-5,15,-3,20,-5,15,-2,20,-5,15,-1,20,-5,15,0,20,-5,15,1,20,-5,15,2,20,-5,15,3,20,-5,15,4,20,-5,15,5,20,-5,15,6,20,-5,15,-7,20,-3,15,-6,20,-3,15,-5,20,-3,15,-4,20,-3,15,-3,20,-3,15,-2,20,-3,15,-1,20,-3,15,0,20,-3,15,1,20,-3,15,2,20,-3,15,3,20,-3,15,4,20,-3,15,5,20,-3,15,6,20,-3,15,-7,21,-1,15,-6,21,-1,15,-5,21,-1,15,-4,21,-1,15,-3,21,-1,15,-2,21,-1,15,-1,21,-1,15,0,21,-1,15,1,21,-1,15,2,21,-1,15,3,21,-1,15,4,21,-1,15,5,21,-1,15,6,21,-1,15,-7,20,1,18,-6,20,1,18,-5,20,1,18,-4,20,1,18,-3,20,1,18,-2,20,1,18,-1,20,1,18,0,20,1,18,1,20,1,18,2,20,1,18,3,20,1,18,4,20,1,18,5,20,1,18,6,20,1,18,-6,22,-3,18,-5,22,-3,18,-4,22,-3,18,-3,22,-3,18,-2,22,-3,18,-1,22,-3,18,0,22,-3,18,1,22,-3,18,2,22,-3,18,3,22,-3,18,4,22,-3,18,5,22,-3,18,-6,25,-3,18,-5,25,-3,18,-4,25,-3,18,-3,25,-3,18,-2,25,-3,18,-1,25,-3,18,0,25,-3,18,1,25,-3,18,2,25,-3,18,3,25,-3,18,4,25,-3,18,5,25,-3,18,-5,18,-2,18,-4,18,-2,18,-3,18,-2,18,-2,18,-2,18,-1,18,-2,18,0,18,-2,18,1,18,-2,18,2,18,-2,18,3,18,-2,18,4,18,-2,18,-6,19,-2,18,-5,19,-2,18,-4,19,-2,18,-3,19,-2,18,-2,19,-2,18,-1,19,-2,18,0,19,-2,18,1,19,-2,18,2,19,-2,18,3,19,-2,18,4,19,-2,18,5,19,-2,18,-6,22,2,18,-5,22,2,18,-4,22,2,18,-3,22,2,18,-2,22,2,18,-1,22,2,18,0,22,2,18,1,22,2,18,2,22,2,18,3,22,2,18,4,22,2,18,5,22,2,18,-6,23,-1,18,-5,23,-1,18,-4,23,-1,18,-3,23,-1,18,-2,23,-1,18,-1,23,-1,18,0,23,-1,18,1,23,-1,18,2,23,-1,18,3,23,-1,18,4,23,-1,18,5,23,-1,18,-6,23,2,18,-5,23,2,18,-4,23,2,18,-3,23,2,18,-2,23,2,18,-1,23,2,18,0,23,2,18,1,23,2,18,2,23,2,18,3,23,2,18,4,23,2,18,5,23,2,18,-6,20,3,21,-5,20,3,21,-4,20,3,21,-3,20,3,21,-2,20,3,21,-1,20,3,21,0,20,3,21,1,20,3,21,2,20,3,21,3,20,3,21,4,20,3,21,5,20,3,21,-6,22,3,21,-5,22,3,21,-4,22,3,21,-3,22,3,21,-2,22,3,21,-1,22,3,21,0,22,3,21,1,22,3,21,2,22,3,21,3,22,3,21,4,22,3,21,5,22,3,21,-6,24,2,21,-5,24,2,21,-4,24,2,21,-3,24,2,21,-2,24,2,21,-1,24,2,21,0,24,2,21,1,24,2,21,2,24,2,21,3,24,2,21,4,24,2,21,5,24,2,21,-7,19,-3,18,-6,19,-3,18,-5,19,-3,18,-4,19,-3,18,-3,19,-3,18,-2,19,-3,18,-1,19,-3,18,0,19,-3,18,1,19,-3,18,2,19,-3,18,3,19,-3,18,4,19,-3,18,5,19,-3,18,6,19,-3,18,-7,20,-4,18,-6,20,-4,18,-5,20,-4,18,-4,20,-4,18,-3,20,-4,18,-2,20,-4,18,-1,20,-4,18,0,20,-4,18,1,20,-4,18,2,20,-4,18,3,20,-4,18,4,20,-4,18,5,20,-4,18,6,20,-4,18,-7,21,-2,18,-6,21,-2,18,-5,21,-2,18,-4,21,-2,18,-3,21,-2,18,-2,21,-2,18,-1,21,-2,18,0,21,-2,18,1,21,-2,18,2,21,-2,18,3,21,-2,18,4,21,-2,18,5,21,-2,18,6,21,-2,18,-7,20,-1,21,-6,20,-1,21,-5,20,-1,21,-4,20,-1,21,-3,20,-1,21,-2,20,-1,21,-1,20,-1,21,0,20,-1,21,1,20,-1,21,2,20,-1,21,3,20,-1,21,4,20,-1,21,5,20,-1,21,6,20,-1,21,-7,21,0,21,-6,21,0,21,-5,21,0,21,-4,21,0,21,-3,21,0,21,-2,21,0,21,-1,21,0,21,0,21,0,21,1,21,0,21,2,21,0,21,3,21,0,21,4,21,0,21,5,21,0,21,6,21,0,21,-5,26,5,22,-4,26,5,22,-3,26,5,22,-2,26,5,22,-1,26,5,22,0,26,5,22,-6,26,-5,20,-5,26,-5,20,-4,26,-5,20,-3,26,-5,20,-2,26,-5,20,-1,26,-5,20,0,26,-5,20,1,26,-5,20,2,26,-5,20,3,26,-5,20,4,26,-5,20,5,26,-5,20,-6,26,-4,20,-5,26,-4,20,-4,26,-4,20,-3,26,-4,20,-2,26,-4,20,-1,26,-4,20,0,26,-4,20,1,26,-4,20,2,26,-4,20,3,26,-4,20,4,26,-4,20,5,26,-4,20,-6,26,4,20,-5,26,4,20,-4,26,4,20,-3,26,4,20,-2,26,4,20,-1,26,4,20,0,26,4,20,1,26,4,20,2,26,4,20,3,26,4,20,4,26,4,20,5,26,4,20,-6,27,-4,20,-5,27,-4,20,-4,27,-4,20,-3,27,-4,20,-2,27,-4,20,-1,27,-4,20,0,27,-4,20,1,27,-4,20,2,27,-4,20,3,27,-4,20,4,27,-4,20,5,27,-4,20,-6,27,-3,20,-5,27,-3,20,-4,27,-3,20,-3,27,-3,20,-2,27,-3,20,-1,27,-3,20,0,27,-3,20,1,27,-3,20,2,27,-3,20,3,27,-3,20,4,27,-3,20,5,27,-3,20,-6,27,-2,20,-5,27,-2,20,-4,27,-2,20,-3,27,-2,20,-2,27,-2,20,-1,27,-2,20,0,27,-2,20,1,27,-2,20,2,27,-2,20,3,27,-2,20,4,27,-2,20,5,27,-2,20,-6,27,3,20,-5,27,3,20,-4,27,3,20,-3,27,3,20,-2,27,3,20,-1,27,3,20,0,27,3,20,1,27,3,20,2,27,3,20,3,27,3,20,4,27,3,20,5,27,3,20,-6,26,-1,22,-5,26,-1,22,-4,26,-1,22,-3,26,-1,22,-2,26,-1,22,-1,26,-1,22,0,26,-1,22,1,26,-1,22,2,26,-1,22,3,26,-1,22,4,26,-1,22,5,26,-1,22,-6,27,1,22,-5,27,1,22,-4,27,1,22,-3,27,1,22,-2,27,1,22,-1,27,1,22,0,27,1,22,1,27,1,22,2,27,1,22,3,27,1,22,4,27,1,22,5,27,1,22,-6,27,4,22,-5,27,4,22,-4,27,4,22,-3,27,4,22,-2,27,4,22,-1,27,4,22,0,27,4,22,1,27,4,22,2,27,4,22,3,27,4,22,4,27,4,22,5,27,4,22,-6,27,5,22,-5,27,5,22,-4,27,5,22,-3,27,5,22,-2,27,5,22,-1,27,5,22,0,27,5,22,1,27,5,22,2,27,5,22,3,27,5,22,4,27,5,22,-6,23,0,21,-5,23,0,21,-4,23,0,21,-3,23,0,21,-2,23,0,21,-1,23,0,21,0,23,0,21,1,23,0,21,2,23,0,21,3,23,0,21,4,23,0,21,5,23,0,21,-7,20,-2,21,-6,20,-2,21,-5,20,-2,21,-4,20,-2,21,-3,20,-2,21,-2,20,-2,21,-1,20,-2,21,0,20,-2,21,1,20,-2,21,2,20,-2,21,3,20,-2,21,4,20,-2,21,5,20,-2,21,6,20,-2,21,-7,21,-3,21,-6,21,-3,21,-5,21,-3,21,-4,21,-3,21,-3,21,-3,21,-2,21,-3,21,-1,21,-3,21,0,21,-3,21,1,21,-3,21,2,21,-3,21,3,21,-3,21,4,21,-3,21,5,21,-3,21,6,21,-3,21,-6,26,-2,22,-5,26,-2,22,-4,26,-2,22,-3,26,-2,22,-2,26,-2,22,-1,26,-2,22,0,26,-2,22,1,26,-2,22,2,26,-2,22,3,26,-2,22,4,26,-2,22,5,26,-2,22,-6,28,-5,23,-5,28,-5,23,-4,28,-5,23,-3,28,-5,23,-2,28,-5,23,-1,28,-5,23,0,28,-5,23,1,28,-5,23,2,28,-5,23,3,28,-5,23,4,28,-5,23,5,28,-5,23,-6,28,-4,23,-5,28,-4,23,-4,28,-4,23,-3,28,-4,23,-2,28,-4,23,-1,28,-4,23,0,28,-4,23,1,28,-4,23,2,28,-4,23,3,28,-4,23,4,28,-4,23,5,28,-4,23,-6,28,-3,23,-5,28,-3,23,-4,28,-3,23,-3,28,-3,23,-2,28,-3,23,-1,28,-3,23,0,28,-3,23,1,28,-3,23,2,28,-3,23,3,28,-3,23,4,28,-3,23,5,28,-3,23,-6,28,-2,23,-5,28,-2,23,-4,28,-2,23,-3,28,-2,23,-2,28,-2,23,-1,28,-2,23,0,28,-2,23,1,28,-2,23,2,28,-2,23,3,28,-2,23,4,28,-2,23,5,28,-2,23,-6,28,-1,23,-5,28,-1,23,-4,28,-1,23,-3,28,-1,23,-2,28,-1,23,-1,28,-1,23,0,28,-1,23,1,28,-1,23,2,28,-1,23,3,28,-1,23,4,28,-1,23,5,28,-1,23,-6,28,0,23,-5,28,0,23,-4,28,0,23,-3,28,0,23,-2,28,0,23,-1,28,0,23,0,28,0,23,1,28,0,23,2,28,0,23,3,28,0,23,4,28,0,23,5,28,0,23,-6,28,1,23,-5,28,1,23,-4,28,1,23,-3,28,1,23,-2,28,1,23,-1,28,1,23,0,28,1,23,1,28,1,23,2,28,1,23,3,28,1,23,4,28,1,23,5,28,1,23,-6,28,2,23,-5,28,2,23,-4,28,2,23,-3,28,2,23,-2,28,2,23,-1,28,2,23,0,28,2,23,1,28,2,23,2,28,2,23,3,28,2,23,4,28,2,23,5,28,2,23,-6,28,3,23,-5,28,3,23,-4,28,3,23,-3,28,3,23,-2,28,3,23,-1,28,3,23,0,28,3,23,1,28,3,23,2,28,3,23,3,28,3,23,4,28,3,23,5,28,3,23,-6,28,4,23,-5,28,4,23,-4,28,4,23,-3,28,4,23,-2,28,4,23,-1,28,4,23,0,28,4,23,1,28,4,23,2,28,4,23,3,28,4,23,4,28,4,23,5,28,4,23,-5,30,-3,23,-4,30,-3,23,-3,30,-3,23,-2,30,-3,23,-1,30,-3,23,0,30,-3,23,1,30,-3,23,2,30,-3,23,3,30,-3,23,4,30,-3,23,-5,30,3,23,-4,30,3,23,-3,30,3,23,-2,30,3,23,-1,30,3,23,0,30,3,23,1,30,3,23,2,30,3,23,3,30,3,23,4,30,3,23,-5,32,1,23,-4,32,1,23,-3,32,1,23,-2,32,1,23,-1,32,1,23,0,32,1,23,1,32,1,23,2,32,1,23,3,32,1,23,4,32,1,23,-5,32,2,23,-4,32,2,23,-3,32,2,23,-2,32,2,23,-1,32,2,23,0,32,2,23,1,32,2,23,2,32,2,23,3,32,2,23,4,32,2,23,-1,30,5,24,0,30,5,24,-3,32,5,24,-2,32,5,24,-1,32,5,24,0,32,5,24,1,32,5,24,2,32,5,24,-5,30,-1,24,-4,30,-1,24,-3,30,-1,24,-2,30,-1,24,-1,30,-1,24,0,30,-1,24,1,30,-1,24,2,30,-1,24,3,30,-1,24,4,30,-1,24,-5,31,1,24,-4,31,1,24,-3,31,1,24,-2,31,1,24,-1,31,1,24,0,31,1,24,1,31,1,24,2,31,1,24,3,31,1,24,4,31,1,24,-5,31,2,24,-4,31,2,24,-3,31,2,24,-2,31,2,24,-1,31,2,24,0,31,2,24,1,31,2,24,2,31,2,24,3,31,2,24,4,31,2,24,-3,31,5,24,-2,31,5,24,-1,31,5,24,0,31,5,24,1,31,5,24,2,31,5,24,-6,28,5,23,-5,28,5,23,-4,28,5,23,-3,28,5,23,-2,28,5,23,-1,28,5,23,0,28,5,23,1,28,5,23,2,28,5,23,3,28,5,23,4,28,5,23,5,28,5,23,-6,29,-4,23,-5,29,-4,23,-4,29,-4,23,-3,29,-4,23,-2,29,-4,23,-1,29,-4,23,0,29,-4,23,1,29,-4,23,2,29,-4,23,3,29,-4,23,4,29,-4,23,5,29,-4,23,-6,29,-3,23,-5,29,-3,23,-4,29,-3,23,-3,29,-3,23,-2,29,-3,23,-1,29,-3,23,0,29,-3,23,1,29,-3,23,2,29,-3,23,3,29,-3,23,4,29,-3,23,5,29,-3,23,-6,29,-2,23,-5,29,-2,23,-4,29,-2,23,-3,29,-2,23,-2,29,-2,23,-1,29,-2,23,0,29,-2,23,1,29,-2,23,2,29,-2,23,3,29,-2,23,4,29,-2,23,5,29,-2,23,-6,29,-1,23,-5,29,-1,23,-4,29,-1,23,-3,29,-1,23,-2,29,-1,23,-1,29,-1,23,0,29,-1,23,1,29,-1,23,2,29,-1,23,3,29,-1,23,4,29,-1,23,5,29,-1,23,-6,29,0,23,-5,29,0,23,-4,29,0,23,-3,29,0,23,-2,29,0,23,-1,29,0,23,0,29,0,23,1,29,0,23,2,29,0,23,3,29,0,23,4,29,0,23,5,29,0,23,-6,29,1,23,-5,29,1,23,-4,29,1,23,-3,29,1,23,-2,29,1,23,-1,29,1,23,0,29,1,23,1,29,1,23,2,29,1,23,3,29,1,23,4,29,1,23,5,29,1,23,-6,29,2,23,-5,29,2,23,-4,29,2,23,-3,29,2,23,-2,29,2,23,-1,29,2,23,0,29,2,23,1,29,2,23,2,29,2,23,3,29,2,23,4,29,2,23,5,29,2,23,-6,29,3,23,-5,29,3,23,-4,29,3,23,-3,29,3,23,-2,29,3,23,-1,29,3,23,0,29,3,23,1,29,3,23,2,29,3,23,3,29,3,23,4,29,3,23,5,29,3,23,-6,29,4,23,-5,29,4,23,-4,29,4,23,-3,29,4,23,-2,29,4,23,-1,29,4,23,0,29,4,23,1,29,4,23,2,29,4,23,3,29,4,23,4,29,4,23,5,29,4,23,-6,29,5,23,-5,29,5,23,-4,29,5,23,-3,29,5,23,-2,29,5,23,-1,29,5,23,0,29,5,23,1,29,5,23,2,29,5,23,3,29,5,23,4,29,5,23,5,29,5,23,-5,30,-2,24,-4,30,-2,24,-3,30,-2,24,-2,30,-2,24,-1,30,-2,24,0,30,-2,24,1,30,-2,24,2,30,-2,24,3,30,-2,24,4,30,-2,24,-5,30,0,24,-4,30,0,24,-3,30,0,24,-2,30,0,24,-1,30,0,24,0,30,0,24,1,30,0,24,2,30,0,24,3,30,0,24,4,30,0,24,-5,30,1,24,-4,30,1,24,-3,30,1,24,-2,30,1,24,-1,30,1,24,0,30,1,24,1,30,1,24,2,30,1,24,3,30,1,24,4,30,1,24,-5,30,2,24,-4,30,2,24,-3,30,2,24,-2,30,2,24,-1,30,2,24,0,30,2,24,1,30,2,24,2,30,2,24,3,30,2,24,4,30,2,24,-5,30,4,24,-4,30,4,24,-3,30,4,24,-2,30,4,24,-1,30,4,24,0,30,4,24,1,30,4,24,2,30,4,24,3,30,4,24,4,30,4,24,-5,31,-3,24,-4,31,-3,24,-3,31,-3,24,-2,31,-3,24,-1,31,-3,24,0,31,-3,24,1,31,-3,24,2,31,-3,24,3,31,-3,24,4,31,-3,24,-5,31,-2,24,-4,31,-2,24,-3,31,-2,24,-2,31,-2,24,-1,31,-2,24,0,31,-2,24,1,31,-2,24,2,31,-2,24,3,31,-2,24,4,31,-2,24,-5,31,-1,24,-4,31,-1,24,-3,31,-1,24,-2,31,-1,24,-1,31,-1,24,0,31,-1,24,1,31,-1,24,2,31,-1,24,3,31,-1,24,4,31,-1,24,-5,31,0,24,-4,31,0,24,-3,31,0,24,-2,31,0,24,-1,31,0,24,0,31,0,24,1,31,0,24,2,31,0,24,3,31,0,24,4,31,0,24,-5,31,3,24,-4,31,3,24,-3,31,3,24,-2,31,3,24,-1,31,3,24,0,31,3,24,1,31,3,24,2,31,3,24,3,31,3,24,4,31,3,24,-5,31,4,24,-4,31,4,24,-3,31,4,24,-2,31,4,24,-1,31,4,24,0,31,4,24,1,31,4,24,2,31,4,24,3,31,4,24,4,31,4,24,-5,32,-3,24,-4,32,-3,24,-3,32,-3,24,-2,32,-3,24,-1,32,-3,24,0,32,-3,24,1,32,-3,24,2,32,-3,24,3,32,-3,24,4,32,-3,24,-5,32,-2,24,-4,32,-2,24,-3,32,-2,24,-2,32,-2,24,-1,32,-2,24,0,32,-2,24,1,32,-2,24,2,32,-2,24,3,32,-2,24,4,32,-2,24,-5,32,-1,24,-4,32,-1,24,-3,32,-1,24,-2,32,-1,24,-1,32,-1,24,0,32,-1,24,1,32,-1,24,2,32,-1,24,3,32,-1,24,4,32,-1,24,-5,32,0,24,-4,32,0,24,-3,32,0,24,-2,32,0,24,-1,32,0,24,0,32,0,24,1,32,0,24,2,32,0,24,3,32,0,24,4,32,0,24,-5,32,3,24,-4,32,3,24,-3,32,3,24,-2,32,3,24,-1,32,3,24,0,32,3,24,1,32,3,24,2,32,3,24,3,32,3,24,4,32,3,24,-5,32,4,24,-4,32,4,24,-3,32,4,24,-2,32,4,24,-1,32,4,24,0,32,4,24,1,32,4,24,2,32,4,24,3,32,4,24,4,32,4,24];
+function buildNurse() {
+  const k = voxelKit();
+  const partOf = (x, y) => y <= 3 ? (x < 0 ? "legR" : "legL") : ((y >= 9 && y <= 17 && (x <= -6 || x >= 5)) || (y >= 7 && y <= 8 && (x <= -7 || x >= 6))) ? (x < 0 ? "armR" : "armL") : "body";
+  for (let i = 0; i < NURSE_VOX.length; i += 4) { const x = NURSE_VOX[i], y = NURSE_VOX[i + 1], z = NURSE_VOX[i + 2]; k.part = partOf(x, y); k.set(x, y, z, parseInt(NURSE_PAL[NURSE_VOX[i + 3]].slice(1), 16)); }
+  return rigFrom(k, { body: [0, 0, 0], armR: [-6.5, 18, 0.5], armL: [6.5, 18, 0.5], legR: [-2, 4, 0.5], legL: [2, 4, 0.5] }, 0.06);
+}
+
+/* ---------- Room (closed, with ceiling, for third-person view) ---------- */
+const RH = 3.6;
+(function buildRoom() {
+  const S = 12;
+  voxels(scene, 1, [-S, S - 1, 0, 0, -S, S - 1], (x, y, z) => ((x + z) & 1) ? "#d8dde4" : "#cfd5dd", 0.5, -0.5, 0.5);
+  const wall = "#eef1f4", base = "#7d8796";
+  box(24.8, RH, 0.4, wall, 0, RH / 2, -12.2); box(24.8, 0.3, 0.45, base, 0, 0.15, -12.2);
+  box(24.8, RH, 0.4, wall, 0, RH / 2, 12.2); box(24.8, 0.3, 0.45, base, 0, 0.15, 12.2);
+  box(0.4, RH, 24.8, wall, -12.2, RH / 2, 0); box(0.45, 0.3, 24.8, base, -12.2, 0.15, 0);
+  box(0.4, RH, 24.8, wall, 12.2, RH / 2, 0); box(0.45, 0.3, 24.8, base, 12.2, 0.15, 0);
+  const ceil = box(24.8, 0.2, 24.8, "#f4f6f8", 0, RH + 0.1, 0, null, false); ceil.receiveShadow = false;
+  const lightMat = new THREE.MeshBasicMaterial({ color: "#ffffff" });
+  for (let x = -8; x <= 8; x += 8) for (let z = -8; z <= 8; z += 8) { const l = new THREE.Mesh(UNIT, lightMat); l.scale.set(2.4, 0.05, 0.6); l.position.set(x, RH - 0.02, z); scene.add(l); }
+  [-7, 0, 7].forEach(x => { box(3.2, 1.6, 0.1, "#bcd6ec", x, 2.0, -11.95, null, false); box(3.4, 0.12, 0.2, "#ffffff", x, 2.85, -11.95); box(3.4, 0.12, 0.2, "#ffffff", x, 1.15, -11.95); box(0.1, 1.6, 0.14, "#ffffff", x, 2.0, -11.93); });
+  box(1.4, 2.5, 0.12, "#8a6a4a", 3, 1.25, 11.95); box(0.2, 0.08, 0.16, "#c7ced9", 2.55, 1.2, 11.88);
+  box(0.12, 2.5, 1.4, "#8a6a4a", -11.95, 1.25, 6); box(0.16, 0.08, 0.2, "#c7ced9", -11.88, 1.2, 5.55);
+  box(1.0, 0.9, 2.4, "#c9d1da", 11.4, 0.45, -7); box(1.06, 0.08, 2.46, "#e9ecef", 11.4, 0.94, -7); box(0.5, 0.12, 0.7, "#aeb7c3", 11.35, 0.92, -7); box(0.08, 0.4, 0.08, "#c7ced9", 11.7, 1.15, -7);
+  box(0.2, 0.9, 0.9, "#ffffff", 11.95, 2.1, 1); box(0.05, 0.5, 0.14, "#c43d3d", 11.83, 2.1, 1); box(0.05, 0.14, 0.5, "#c43d3d", 11.83, 2.1, 1);
+  [[-10.8, -10.8], [10.8, 10.8], [-10.8, 10.8]].forEach(p => { const pl = group(null, p[0], 0, p[1]); box(0.7, 0.6, 0.7, "#8b5e3c", 0, 0.3, 0, pl); voxels(pl, 0.18, [-3, 3, 0, 8, -3, 3], (x, y, z) => (x * x + z * z + (y - 4) * (y - 4) * 0.5 < 10 && hash(x, y, z) > .25) ? (hash(z, x, y) > .5 ? "#3f7d4a" : "#2f6a3c") : null, 0, 0.7, 0); });
+  // chairs along the front wall
+  [-6, -4.8, -3.6].forEach(x => { box(0.9, 0.08, 0.8, "#2f6fd0", x, 0.5, 11.3); box(0.9, 0.7, 0.08, "#2f6fd0", x, 0.9, 11.7); box(0.06, 0.5, 0.06, "#7d8796", x, 0.25, 11.3); });
+})();
+function canvasPlane(w, h, draw, pw, ph) {
+  const cv = document.createElement("canvas"); cv.width = pw; cv.height = ph; draw(cv.getContext("2d"), pw, ph);
+  const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t }));
+  mesh.userData.canvas = cv; mesh.userData.tex = t; return mesh;
+}
+const poster = canvasPlane(3.2, 1.9, (x, w, h) => {
+  x.fillStyle = "#fbfcfd"; x.fillRect(0, 0, w, h); x.fillStyle = "#1b2333"; x.font = "bold 26px Inter, sans-serif"; x.fillText("TABELA PERIÓDICA", 20, 36);
+  const cols = ["#f2c9c9", "#f6dcb2", "#d6e6c3", "#c8dcef", "#e0d4f0"];
+  for (let r = 0; r < 7; r++) for (let c = 0; c < 18; c++) { if (r === 0 && c > 0 && c < 17) continue; if ((r === 1 || r === 2) && c > 1 && c < 12) continue; x.fillStyle = cols[(c + r) % 5]; x.fillRect(20 + c * 27, 52 + r * 32, 25, 30); }
+}, 512, 300);
+poster.position.set(-3.6, 2.2, -11.98); scene.add(poster);
+const poster2 = canvasPlane(1.6, 2.1, (x, w, h) => {
+  x.fillStyle = "#fbfcfd"; x.fillRect(0, 0, w, h); x.fillStyle = "#13897d"; x.font = "bold 24px Inter, sans-serif"; x.fillText("HIPOGLICEMIA", 16, 40);
+  x.fillStyle = "#1b2333"; x.font = "17px Inter, sans-serif";
+  ["Tremor", "Suor frio", "Coração acelerado", "Tontura", "Confusão", "Desmaio"].forEach((s, i) => x.fillText("• " + s, 22, 84 + i * 30));
+  x.fillStyle = "#c43d3d"; x.font = "bold 18px Inter, sans-serif"; x.fillText("abaixo de 70 mg/dL", 22, 290);
+}, 256, 320);
+poster2.position.set(11.98, 2.0, -3); poster2.rotation.y = -Math.PI / 2; scene.add(poster2);
+
+const obstacles = [];
+const bed = group(null, 0, 0, 0);
+[[-0.75, -1.45], [0.75, -1.45], [-0.75, 1.45], [0.75, 1.45]].forEach(p => box(0.08, 0.5, 0.08, "#9aa5b8", p[0], 0.25, p[1], bed));
+box(1.65, 0.12, 3.1, "#aeb7c3", 0, 0.52, 0, bed); box(1.55, 0.2, 2.95, "#f7f9fb", 0, 0.68, 0, bed);
+box(1.0, 0.16, 0.55, "#ffffff", 0, 0.86, -1.1, bed);
+box(1.7, 1.0, 0.08, "#c7ced9", 0, 0.95, -1.56, bed); box(1.7, 0.6, 0.08, "#c7ced9", 0, 0.75, 1.56, bed);
+box(0.06, 0.06, 1.6, "#9aa5b8", 0.84, 0.95, 0.2, bed);
+obstacles.push({ box: [-1.0, 1.0, -1.75, 1.75] });
+const blanket = box(1.6, 0.07, 1.45, "#8fb3df", 0, 1.08, 0.78);
+const monitorG = group(null, 1.45, 0, -1.25);
+box(0.08, 1.5, 0.08, "#9aa5b8", 0, 0.75, 0, monitorG); box(0.5, 0.06, 0.5, "#7d8796", 0, 0.03, 0, monitorG);
+box(0.95, 0.65, 0.14, "#2b2f36", 0, 1.75, 0, monitorG);
+const monitorScreen = canvasPlane(0.85, 0.55, () => {}, 340, 220);
+monitorScreen.material = new THREE.MeshBasicMaterial({ map: monitorScreen.userData.tex });
+monitorScreen.position.set(0, 1.75, 0.075); monitorG.add(monitorScreen);
+monitorG.rotation.y = -0.6;
+obstacles.push({ x: 1.45, z: -1.25, r: 0.35 });
+function drawMonitor(t, recovered) {
+  const cv = monitorScreen.userData.canvas, x = cv.getContext("2d"), w = cv.width, h = cv.height;
+  x.fillStyle = "#06090d"; x.fillRect(0, 0, w, h);
+  x.strokeStyle = "#35d07f"; x.lineWidth = 3; x.beginPath();
+  for (let i = 0; i < w; i++) { const ph = ((i + t * 120) % 90) / 90; const v = ph > .45 && ph < .5 ? -38 : ph > .5 && ph < .55 ? 22 : 0; const y = 50 + v; i ? x.lineTo(i, y) : x.moveTo(i, y); }
+  x.stroke();
+  x.font = "600 22px 'IBM Plex Mono', monospace";
+  x.fillStyle = "#35d07f"; x.fillText("FC  " + (recovered ? "84" : "118") + " bpm", 14, 122);
+  x.fillStyle = "#5ac8fa"; x.fillText("SpO₂ 98 %", 14, 154);
+  x.fillStyle = recovered ? "#35d07f" : "#ff5a52"; x.fillText("GLIC " + (recovered ? "92" : "48") + " mg/dL", 14, 190);
+  monitorScreen.userData.tex.needsUpdate = true;
+}
+drawMonitor(0, false);
+
+/* Pedro = Estudante Voxel. Lying on the bed (eyes closed, no backpack) and standing for the ending. */
+const pedroLying = buildStudent({ eyesClosed: true, noBackpack: true });
+scene.add(pedroLying.g);
+pedroLying.g.rotation.x = -Math.PI / 2; pedroLying.g.position.set(0, 0.93, 1.02);
+const pedroUp = buildStudent();
+scene.add(pedroUp.g); pedroUp.g.visible = false; pedroUp.g.position.set(-1.55, 0, 0.6); pedroUp.g.rotation.y = 0.6;
+
+/* ---------- Labels ---------- */
+function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+function labelTex(l1, l2, bar, state) {
+  const cv = document.createElement("canvas"); cv.width = 512; cv.height = 150;
+  const x = cv.getContext("2d");
+  x.fillStyle = "rgba(20,33,61,.18)"; rr(x, 10, 18, 492, 124, 14); x.fill();
+  x.fillStyle = state === "locked" ? "#eef1f4" : "#ffffff"; rr(x, 10, 10, 492, 124, 14); x.fill();
+  x.fillStyle = bar; rr(x, 10, 10, 22, 124, 10); x.fill();
+  x.textBaseline = "middle"; x.textAlign = "left";
+  x.fillStyle = state === "locked" ? "#8a94a6" : "#1b2333"; x.font = "36px Silkscreen, monospace"; x.fillText(l1, 52, 56);
+  x.fillStyle = state === "done" ? "#13897d" : state === "locked" ? "#8a94a6" : "#5a6579"; x.font = "600 30px Inter, sans-serif"; x.fillText(l2, 52, 104);
+  const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; return t;
+}
+function makeSprite(w = 2.2) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex("", "", "#ccc", "locked"), transparent: true })); s.scale.set(w, w * 150 / 512, 1); s.renderOrder = 5; return s; }
+function setSprite(s, l1, l2, bar, state) { s.material.map.dispose(); s.material.map = labelTex(l1, l2, bar, state); s.material.needsUpdate = true; }
+
+/* ---------- Station equipment ---------- */
+function bench(g, w = 2.1) {
+  box(w, 0.86, 0.9, "#c9d1da", 0, 0.43, 0, g); box(w + 0.08, 0.07, 0.98, "#eceff2", 0, 0.9, 0, g);
+  for (let i = -1; i <= 1; i++) { box(0.6, 0.02, 0.02, "#7d8796", i * (w / 3), 0.62, 0.46, g, false); box(0.16, 0.03, 0.03, "#5a6579", i * (w / 3), 0.55, 0.47, g, false); }
+}
+function glucoseModel(parent, y) {
+  const g = group(parent, 0, y, 0), C = "#3a3f47", O = "#d64541", H = "#f2f2f2";
+  const ring = [];
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; ring.push([Math.cos(a) * 0.3, Math.sin(a) * 0.3]); }
+  ring.forEach((p, i) => { box(0.12, 0.12, 0.12, i === 0 ? O : C, p[0], 0, p[1], g, false); const q = ring[(i + 1) % 6]; const b = box(0.03, 0.03, 0.3, "#c7ced9", (p[0] + q[0]) / 2, 0, (p[1] + q[1]) / 2, g, false); b.rotation.y = Math.atan2(q[0] - p[0], q[1] - p[1]); });
+  ring.slice(1).forEach((p, i) => { const dir = i % 2 ? 1 : -1; box(0.03, 0.18, 0.03, "#c7ced9", p[0], dir * 0.12, p[1], g, false); box(0.1, 0.1, 0.1, i === 4 ? C : O, p[0], dir * 0.24, p[1], g, false); box(0.06, 0.06, 0.06, H, p[0] * 1.25, dir * 0.3, p[1] * 1.25, g, false); });
+  return g;
+}
+const STATION_BUILD = {
+  triagem(g) {
+    bench(g);
+    box(0.32, 0.07, 0.5, "#2b2f36", -0.55, 0.97, 0.05, g); box(0.22, 0.02, 0.16, "#a7e3c9", -0.55, 1.01, -0.05, g, false); box(0.04, 0.01, 0.2, "#ffffff", -0.55, 0.96, 0.38, g, false);
+    box(0.5, 0.03, 0.66, "#8a6a4a", 0.15, 0.95, 0.05, g); box(0.42, 0.01, 0.55, "#ffffff", 0.15, 0.97, 0.08, g, false);
+    for (let i = 0; i < 4; i++) box(0.3, 0.01, 0.02, "#9aa5b8", 0.15, 0.98, -0.12 + i * 0.1, g, false);
+    box(0.06, 0.6, 0.06, "#9aa5b8", 0.75, 1.23, -0.1, g); const m = glucoseModel(g, 1.75); m.position.x = 0.75; m.position.z = -0.1; g.userData.spin = m;
+  },
+  nutricao(g) {
+    bench(g, 1.6); g.children.forEach(c => c.position.x -= 0.45);
+    box(1.0, 2.1, 0.85, "#f2f4f6", 0.9, 1.05, -0.05, g); box(0.02, 2.0, 0.02, "#c7ced9", 0.9, 1.05, 0.38, g, false); box(1.0, 0.02, 0.02, "#c7ced9", 0.9, 1.45, 0.38, g, false);
+    box(0.05, 0.4, 0.05, "#9aa5b8", 0.48, 1.75, 0.42, g); box(0.05, 0.6, 0.05, "#9aa5b8", 0.48, 0.95, 0.42, g);
+    [["#f3ead2", 0.3, 0.14], ["#d9a35f", 0.35, 0.18], ["#c9cf6a", 0.12, 0.34], ["#f1e2b6", 0.28, 0.12], ["#e7c08a", 0.26, 0.16]].forEach((it, i) => box(it[1], it[2], 0.24, it[0], -1.05 + i * 0.32, 0.94 + it[2] / 2, 0.05, g));
+  },
+  endocrino(g) {
+    bench(g);
+    box(0.9, 0.08, 0.6, "#2b2f36", 0, 0.98, 0, g); box(0.06, 0.4, 0.06, "#5a6579", 0, 1.2, 0, g);
+    voxels(g, 0.07, [-8, 6, -3, 4, -4, 4], (x, y, z) => { const d = (x + 1) * (x + 1) / 49 + (y * y) / 12 + (z * z) / 16; return d < 1 && !(x > 2 && y > 1) ? (hash(x, y, z) > .3 ? "#7b2d26" : "#6a251f") : null; }, -0.1, 1.62, -0.05);
+    voxels(g, 0.06, [-1, 1, -1, 1, -1, 1], () => "#4f7a3a", -0.05, 1.42, 0.25);
+    voxels(g, 0.06, [-6, 6, -1, 1, -1, 1], (x, y, z) => (Math.abs(y + Math.round(x * 0.2)) <= 1 && (x > -5 || Math.abs(y) < 1)) ? (hash(x, y, z) > .4 ? "#e8b48f" : "#dca37c") : null, 0.15, 1.3, 0.3);
+    voxels(g, 0.07, [-3, 3, -3, 3, -3, 3], (x, y, z) => x * x + y * y + z * z < 9 ? "#d98b84" : null, 0.45, 1.72, 0.1);
+  },
+  metabolismo(g) {
+    bench(g);
+    box(0.7, 0.08, 0.5, "#2b2f36", 0, 0.98, 0, g);
+    const mito = group(g, 0, 1.45, 0);
+    voxels(mito, 0.055, [-13, 13, -6, 6, -6, 6], (x, y, z) => {
+      const d = x * x / 169 + y * y / 36 + z * z / 36; if (d > 1) return null;
+      if (z > 0 && y > 0) return null;
+      if (d > 0.72) return hash(x, y, z) > .5 ? "#d9824a" : "#cf7640";
+      if (Math.abs(((x + 26) % 5) - 2) < 1 && Math.abs(y) < 4) return "#e9a46a";
+      return "#f6dcc0";
+    });
+    g.userData.spinSlow = mito;
+  }
+};
+const stations = PHASES.map((p, i) => {
+  const g = group(null, p.pos[0], 0, p.pos[1]);
+  const holder = group(g);
+  STATION_BUILD[p.key](holder);
+  const lab = makeSprite(); lab.position.set(0, 2.55, 0); g.add(lab);
+  g.rotation.y = Math.atan2(-p.pos[0], 6 - p.pos[1]);
+  obstacles.push({ x: p.pos[0], z: p.pos[1], r: p.key === "nutricao" ? 1.4 : 1.25 });
+  return { g, holder, lab, p };
+});
+const ring = new THREE.Mesh(new THREE.RingGeometry(1.45, 1.62, 40), new THREE.MeshBasicMaterial({ color: "#2f6fd0", transparent: true, opacity: 0.75, side: THREE.DoubleSide }));
+ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
+const arrow = group(null);
+box(0.16, 0.3, 0.16, "#e3b23c", 0, 0.22, 0, arrow, false); box(0.5, 0.12, 0.16, "#e3b23c", 0, 0, 0, arrow, false); box(0.3, 0.12, 0.16, "#e3b23c", 0, -0.12, 0, arrow, false); box(0.12, 0.12, 0.16, "#e3b23c", 0, -0.24, 0, arrow, false);
+
+/* Player = Enfermeira Voxel */
+const START = { x: 0, z: 6.2, h: Math.PI };
+let player = null;
+function buildPlayer() {
+  if (player) scene.remove(player.g);
+  player = buildNurse(); scene.add(player.g);
+  player.g.position.set(START.x, 0, START.z); player.heading = START.h; player.g.rotation.y = START.h; player.walk = 0;
+}
+buildPlayer();
+
+const confetti = [];
+function burst(x, y, z, n = 50) {
+  const cs = ["#2f6fd0", "#13897d", "#e3b23c", "#ffffff", "#c43d3d"];
+  for (let k = 0; k < n; k++) {
+    const m = box(0.08, 0.08, 0.08, cs[k % cs.length], x, y, z, null, false);
+    confetti.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 5, 2.5 + Math.random() * 3, (Math.random() - 0.5) * 5), life: 2 + Math.random() });
+  }
+}
+
+const portraits = {};
+function makePortraits() {
+  const pr = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  pr.setSize(256, 256); pr.setPixelRatio(1);
+  const ps = new THREE.Scene();
+  ps.add(new THREE.HemisphereLight(0xffffff, 0x9aa5b8, 0.85));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.55); dl.position.set(3, 5, 6); ps.add(dl);
+  const pc = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
+  const shot = (obj, key, headOnly) => {
+    const holder = new THREE.Group(); holder.add(obj); ps.add(holder); holder.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(holder), c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+    let target = c.clone(), size = Math.max(s.x, s.y);
+    if (headOnly) { target.y = bb.max.y - 0.58; size = 1.25; }
+    const dist = size * 2.0 + 0.4;
+    pc.position.set(target.x + dist * 0.3, target.y + dist * 0.2, target.z + dist); pc.lookAt(target);
+    pr.render(ps, pc); portraits[key] = pr.domElement.toDataURL("image/png"); ps.remove(holder);
+  };
+  PHASES.forEach(p => { const g = new THREE.Group(); STATION_BUILD[p.key](g); shot(g, p.key); });
+  shot(buildNurse().g, "nurse", true);
+  shot(buildStudent({ eyesClosed: true, noBackpack: true }).g, "pedro", true);
+  pr.dispose(); try { pr.forceContextLoss(); } catch (e) {}
+  document.querySelectorAll("img[data-portrait]").forEach(i => i.src = portraits[i.dataset.portrait]);
+}
+
+/* ---------------- Game state ---------------- */
+const TOTAL = 20 * 60;
+const S = { mode: "start", name: "", phase: 0, time: TOTAL, score: 0, errors: 0, hints: 0, phaseErr: 0, phaseHint: false, streak: 0, modal: null, won: false, savedId: null, timeBonus: 0 };
+const keys = {};
+const joyV = { x: 0, y: 0 };
+const look = { yaw: 0, pitch: 0, dragging: false, lx: 0, ly: 0, idle: 0 };
+
+const dots = $("#dots"); for (let i = 0; i < N; i++) dots.append(el("i"));
+let lastShown = -1;
+function updateHUD() {
+  const t = Math.ceil(S.time);
+  if (t !== lastShown) { lastShown = t; const tm = $("#timer"); tm.textContent = fmt(S.time); tm.classList.toggle("low", S.time <= 120); }
+  $("#hudScore").textContent = S.score.toLocaleString("pt-BR");
+  [...dots.children].forEach((d, i) => { d.className = i < S.phase ? "done" : i === S.phase ? "now" : ""; });
+  $("#objective").textContent = S.phase < N ? `Estação ${S.phase + 1}/${N} · ${PHASES[S.phase].station}: ${PHASES[S.phase].title}` : "Caso resolvido · Pedro estável";
+}
+function refreshStations() {
+  stations.forEach((st, i) => {
+    const p = st.p, name = (i + 1) + " " + p.station.toUpperCase().split(" ")[0];
+    if (i < S.phase) setSprite(st.lab, name, "concluída · rever quadro", "#13897d", "done");
+    else if (i === S.phase) setSprite(st.lab, name, p.title, p.color, "now");
+    else setSprite(st.lab, name, "bloqueada", "#aeb7c3", "locked");
+  });
+}
+function toast(msg, ms = 2400) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, ms); }
+
+/* ---------------- Modal ---------------- */
+const modal = $("#modal");
+let views = null;
+function openModal(kind) { S.modal = kind; modal.hidden = false; $("#talk").hidden = true; }
+function closeModal() { S.modal = null; modal.hidden = true; modal.innerHTML = ""; views = null; stopSpeech(); canvas.focus({ preventScroll: true }); }
+function panelHead(img, eyebrow, title, onClose) {
+  const h = el("div", "panel-head");
+  const im = el("img"); im.src = img || ""; im.alt = ""; h.append(im);
+  const t = el("div", "t"); t.append(el("div", "eyebrow", eyebrow), el("h2", null, title)); h.append(t);
+  if (onClose) { const x = el("button", "icon-btn close", "✕"); x.type = "button"; x.setAttribute("aria-label", "Fechar"); x.onclick = onClose; h.append(x); }
+  return h;
+}
+function lessonPanel(i, review) {
+  const p = PHASES[i];
+  const panel = el("div", "panel");
+  panel.append(panelHead(portraits[p.key], `Estação ${i + 1} de ${N} · ${p.station}`, p.title, closeModal));
+  const body = el("div", "panel-body");
+  const c = el("div", "concept"); c.append(el("h3", null, "Entenda"));
+  p.paras.forEach(t => c.append(el("p", null, t)));
+  body.append(c);
+  const board = el("div", "board");
+  const r = el("div", "refs"); r.append(el("h3", null, "Valores para consulta"));
+  const tb = el("table"); p.refs.forEach(row => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", null, row[1])); tb.append(tr); }); r.append(tb);
+  const cl = el("div", "clinical"); cl.append(el("h3", null, "E o Pedro?"), el("p", null, p.clinical));
+  board.append(r, cl); body.append(board);
+  const foot = el("div", "panel-foot");
+  foot.append(el("span", "note-pause", "O cronômetro fica parado enquanto você lê."), el("span", "spacer"));
+  foot.append(speakButton([p.title + ".", ...p.paras, "E o Pedro? " + p.clinical].join(" ")));
+  const go = el("button", "btn", review ? "Fechar" : "Ir para o desafio"); go.type = "button";
+  go.onclick = () => { if (review) closeModal(); else showChallenge(i); };
+  foot.append(go); body.append(foot); panel.append(body);
+  return panel;
+}
+function openLesson(i, review = false) {
+  sfx.talk(); modal.innerHTML = ""; openModal("lesson");
+  views = { lesson: lessonPanel(i, review), challenge: null, i };
+  modal.append(views.lesson); modal.scrollTop = 0;
+  setTimeout(() => { if (views) { const b = views.lesson.querySelector(".panel-foot .btn:last-child"); if (b) b.focus({ preventScroll: true }); } }, 50);
+}
+function showChallenge(i) {
+  stopSpeech();
+  if (!views.challenge) { views.challenge = challengePanel(i); modal.append(views.challenge); }
+  views.lesson.hidden = true; views.challenge.hidden = false; S.modal = "challenge"; modal.scrollTop = 0;
+}
+function backToLesson() { stopSpeech(); views.challenge.hidden = true; views.lesson.hidden = false; S.modal = "lesson"; modal.scrollTop = 0; }
+
+let cur = null;
+function challengePanel(i) {
+  const p = PHASES[i];
+  S.phaseErr = 0; S.phaseHint = false;
+  const panel = el("div", "panel");
+  panel.append(panelHead(portraits[p.key], `Desafio da estação ${i + 1} · ${p.station}`, p.title, null));
+  const body = el("div", "panel-body");
+  const work = el("div", "stack");
+  const fb = el("div", "fb"); fb.setAttribute("role", "status");
+  const foot = el("div", "panel-foot");
+  const back = el("button", "btn ghost", "Rever o quadro"); back.type = "button"; back.onclick = backToLesson;
+  const hint = el("button", "btn teal", "Dica (−1 min)"); hint.type = "button";
+  hint.onclick = () => {
+    if (S.phaseHint) return;
+    S.phaseHint = true; S.hints++; S.time = Math.max(0, S.time - 60); hint.disabled = true; hint.textContent = "Dica usada";
+    const hb = el("div", "refs"); hb.style.borderRadius = "8px"; hb.style.padding = "10px 12px"; hb.append(el("h3", null, "Dica"), el("p", null, p.hint));
+    body.insertBefore(hb, fb); sfx.tick();
+  };
+  foot.append(back, el("span", "spacer"), hint);
+  body.append(work, fb, foot); panel.append(body);
+  cur = {
+    i, fb,
+    right(msg) { fb.className = "fb ok"; fb.textContent = msg; sfx.ok(); },
+    wrong(msg) { S.phaseErr++; S.errors++; fb.className = "fb bad"; fb.textContent = msg; fb.classList.remove("shake"); void fb.offsetWidth; fb.classList.add("shake"); sfx.bad(); },
+    clear() { fb.className = "fb"; fb.textContent = ""; },
+    done: () => finishPhase(i)
+  };
+  RUN[i](work);
+  return panel;
+}
+function seq(work, fns) {
+  const stage = el("div", "stack"); work.append(stage); let k = 0;
+  const go = () => { if (!cur || k >= fns.length) return cur && cur.done(); const f = fns[k++]; stage.innerHTML = ""; cur.clear(); f(stage, go, k, fns.length); };
+  go();
+}
+const SHAPES = ["▲", "◆", "●", "■"];
+function mcq(stage, next, q, opts, label) {
+  if (label) stage.append(el("div", "step-label", label));
+  stage.append(el("p", "q-text", q));
+  const grid = el("div", "opts");
+  shuffle(opts.slice()).forEach((o, k) => {
+    const b = el("button", "opt c" + k); b.type = "button";
+    b.append(el("span", "shape", SHAPES[k]), el("span", null, o.t));
+    b.onclick = () => {
+      if (o.ok) { b.classList.add("is-ok"); grid.querySelectorAll("button").forEach(x => x.disabled = true); cur.right(o.msg || "Certo!"); setTimeout(next, 1300); }
+      else { b.classList.add("is-no"); b.disabled = true; cur.wrong(o.msg || "Não é essa. Releia o quadro e tente outra."); }
+    };
+    grid.append(b);
+  });
+  stage.append(grid);
+}
+
+const RUN = [
+  // 1. Triagem
+  work => {
+    const f = el("div", "ficha");
+    const fh = el("div", "fh"); fh.append(el("span", null, "FICHA DA ENFERMARIA"), el("span", null, "Pedro, 16 anos")); f.append(fh);
+    const tb = el("table");
+    [
+      ["O que aconteceu", "Desmaiou na aula de Educação Física", ""],
+      ["Última refeição", "Há 12 horas (não tomou café da manhã)", ""],
+      ["Sintomas", "Tremor, suor frio, palidez, confusão", ""],
+      ["Batimentos do coração", "118 por minuto", "60 a 100"],
+      ["Pressão arterial", "11 por 7", "cerca de 12 por 8"],
+      ["Temperatura", "36,5 °C", "36 a 37,5 °C"],
+      ["Oxigênio no sangue", "98 %", "95 % ou mais"],
+      ["Glicose no sangue", "48 mg/dL", "70 a 99 mg/dL"]
+    ].forEach(r => { const tr = el("tr"); const a = el("td", null, r[0]); const b = el("td"); b.append(el("span", "val" + (r[0] === "Glicose no sangue" ? " flag" : ""), r[1])); if (r[2]) b.append(document.createElement("br"), el("span", "ref", "normal: " + r[2])); tr.append(a, b); tb.append(tr); });
+    f.append(tb); work.append(f);
+    seq(work, [
+      (s, n, k, t) => mcq(s, n, "Qual resultado da ficha explica o desmaio do Pedro?", [
+        { t: "Glicose no sangue: 48 mg/dL", ok: true, msg: "Isso. 48 está bem abaixo de 70, o mínimo normal." },
+        { t: "Temperatura: 36,5 °C", msg: "A temperatura está normal. Procure um valor fora da faixa." },
+        { t: "Oxigênio no sangue: 98 %", msg: "O oxigênio está normal. Compare os outros resultados." },
+        { t: "Pressão arterial: 11 por 7", msg: "Essa pressão é normal para um adolescente. Qual valor está fora do normal?" }
+      ], `Pergunta ${k} de ${t}`),
+      (s, n, k, t) => mcq(s, n, "O coração do Pedro está batendo rápido (118 por minuto). Por quê?", [
+        { t: "O corpo liberou catecolaminas (como a adrenalina) por causa do estresse pós-exercício e da glicose baixa", ok: true, msg: "Isso. As catecolaminas aceleram o coração e ajudam a liberar glicose no sangue." },
+        { t: "Ele está com febre", msg: "A temperatura dele está normal na ficha." },
+        { t: "Ele está no estado pós-prandial e comeu demais", msg: "Ele está em jejum há 12 horas, não no estado pós-prandial." },
+        { t: "Está faltando oxigênio no sangue", msg: "O oxigênio está normal (98 %). Releia a parte sobre as catecolaminas." }
+      ], `Pergunta ${k} de ${t}`)
+    ]);
+  },
+  // 2. Nutrição
+  work => {
+    const stage = el("div", "stack"); work.append(stage);
+    stage.append(el("p", "q-text", "Separe os alimentos pelo nutriente que aparece em maior quantidade. Toque no alimento e depois no grupo."));
+    stage.append(el("p", "note-pause", "Valores aproximados em 100 g de alimento: C = carboidrato, P = proteína, G = gordura (em gramas)."));
+    const foods = shuffle([
+      ["Arroz branco cozido", "C 28 · P 2,5 · G 0,2", "c"], ["Pão francês", "C 58 · P 8 · G 3", "c"], ["Macarrão cozido", "C 30 · P 5,8 · G 0,9", "c"],
+      ["Peito de frango grelhado", "C 0 · P 32 · G 2,5", "p"], ["Clara de ovo", "C 0,7 · P 11 · G 0,2", "p"],
+      ["Azeite de oliva", "C 0 · P 0 · G 100", "g"], ["Manteiga", "C 0,1 · P 0,9 · G 82", "g"]
+    ]);
+    const chips = el("div", "chips"); let sel = null, left = foods.length;
+    const bins = el("div", "bins"), binEls = {};
+    foods.forEach(f => {
+      const c = el("button", "chip"); c.type = "button"; c.append(el("span", null, f[0]), el("small", null, f[1]));
+      c.onclick = () => { if (c.classList.contains("done")) return; chips.querySelectorAll(".chip").forEach(x => x.classList.remove("sel")); c.classList.add("sel"); sel = { f, c }; Object.values(binEls).forEach(b => b.classList.add("ready")); };
+      chips.append(c);
+    });
+    [["c", "Carboidrato", "vira glicose"], ["p", "Proteína", "constrói o corpo"], ["g", "Gordura", "reserva de energia"]].forEach(b => {
+      const be = el("button", "bin"); be.type = "button"; be.append(el("span", "bt", b[1]), el("span", "bs", b[2])); const inn = el("div", "in"); be.append(inn); binEls[b[0]] = be;
+      be.onclick = () => {
+        if (!sel) { toast("Primeiro toque em um alimento."); return; }
+        if (sel.f[2] === b[0]) { inn.append(el("span", null, sel.f[0])); sel.c.classList.remove("sel"); sel.c.classList.add("done"); sel.c.disabled = true; sel = null; left--; Object.values(binEls).forEach(x => x.classList.remove("ready")); cur.right(left ? `Certo! Faltam ${left}.` : "Tudo separado!"); if (!left) setTimeout(() => cur && cur.done(), 1100); }
+        else cur.wrong(`${sel.f[0]}: esse não é o maior número da tabela. Compare C, P e G.`);
+      };
+      bins.append(be);
+    });
+    stage.append(chips, bins);
+  },
+  // 3. Hormônios
+  work => {
+    seq(work, [
+      (stage, next) => {
+        stage.append(el("div", "step-label", "Parte 1 de 3"), el("p", "q-text", "Ligue cada termo ao que ele significa. Toque no termo e depois na frase."));
+        const pairs = [["Insulina", "Hormônio que faz a glicose do sangue baixar"], ["Glucagon", "Hormônio que faz a glicose do sangue subir"], ["Glicogênio", "Estoque de glicose guardado no fígado e nos músculos"], ["Pâncreas", "Órgão que produz a insulina e o glucagon"]];
+        const m = el("div", "match"), Lc = el("div", "col"), Rc = el("div", "col");
+        let sel = null, matched = 0;
+        pairs.forEach((p, k) => { const b = el("button", "mbtn term", p[0]); b.type = "button"; b.dataset.k = k; b.onclick = () => { if (b.classList.contains("locked")) return; Lc.querySelectorAll(".mbtn").forEach(x => x.classList.remove("sel")); b.classList.add("sel"); sel = b; }; Lc.append(b); });
+        shuffle(pairs.map((p, k) => [p[1], k])).forEach(d => {
+          const b = el("button", "mbtn", d[0]); b.type = "button";
+          b.onclick = () => {
+            if (b.classList.contains("locked")) return;
+            if (!sel) { toast("Primeiro toque em um termo da esquerda."); return; }
+            if (+sel.dataset.k === d[1]) { const c = "m" + matched; sel.classList.remove("sel"); sel.classList.add(c, "locked"); b.classList.add(c, "locked"); sel = null; matched++; cur.right("Par certo!"); if (matched === 4) { cur.right("Todos os pares certos!"); setTimeout(next, 1000); } }
+            else cur.wrong("Esse par não combina. Releia o quadro.");
+          };
+          Rc.append(b);
+        });
+        m.append(Lc, Rc); stage.append(m);
+      },
+      (s, n) => mcq(s, n, "O Pedro está em jejum. Por que o corpo dele está liberando glucagon agora?", [
+        { t: "Porque no jejum, e depois do exercício, a glicose dele está baixa", ok: true, msg: "Isso. No jejum a glicose cai e o pâncreas libera glucagon." },
+        { t: "Porque ele comeu muito doce antes da aula", msg: "Comer doce faz a glicose subir, e aí o pâncreas libera insulina." },
+        { t: "Porque a temperatura do corpo caiu", msg: "O glucagon responde à glicose, não à temperatura." },
+        { t: "Porque a insulina estava alta", msg: "Em jejum a insulina fica baixa. O que o pâncreas está percebendo?" }
+      ], "Parte 2 de 3"),
+      (s, n) => mcq(s, n, "Em qual momento a insulina estaria mais alta?", [
+        { t: "No estado pós-prandial, meia hora depois de um almoço com arroz e pão", ok: true, msg: "Isso. No estado pós-prandial a glicose sobe e o pâncreas libera insulina." },
+        { t: "Depois de 12 horas de jejum", msg: "No jejum a glicose cai e quem trabalha é o glucagon." },
+        { t: "Durante um exercício longo e pesado", msg: "No exercício a insulina diminui para não faltar glicose no sangue." },
+        { t: "Durante uma hipoglicemia", msg: "Com a glicose baixa, o corpo reduz a insulina." }
+      ], "Parte 3 de 3")
+    ]);
+  },
+  // 4. Energia da célula
+  work => {
+    seq(work, [
+      (stage, next) => {
+        stage.append(el("div", "step-label", "Parte 1 de 2"), el("p", "q-text", "Coloque em ordem o caminho da glicose até virar energia."));
+        const steps = [["Glicose", "o combustível"], ["Glicólise", "no citoplasma"], ["Ciclo de Krebs", "na mitocôndria"], ["Cadeia respiratória", "usa o oxigênio"], ["ATP", "energia pronta"]];
+        const slots = el("div", "slots"); const ph = el("span", "ph", "Toque nas etapas na ordem…"); slots.append(ph);
+        const chips = el("div", "chips"); let k = 0;
+        shuffle(steps.slice()).forEach(st => {
+          const c = el("button", "chip"); c.type = "button"; c.append(el("span", null, st[0]));
+          c.onclick = () => {
+            if (c.disabled) return;
+            if (st[0] === steps[k][0]) { if (k === 0) ph.remove(); else slots.append(el("span", "arrow", "→")); const sp = el("span", "s"); sp.append(el("span", null, st[0]), el("small", null, st[1])); slots.append(sp); c.classList.add("done"); c.disabled = true; k++; cur.right(k < 5 ? "Certo! E depois?" : "Caminho completo!"); if (k === 5) setTimeout(next, 1100); }
+            else cur.wrong(k === 0 ? "Comece pelo combustível que vem da comida." : `Essa etapa não vem logo depois de ${steps[k - 1][0]}.`);
+          };
+          chips.append(c);
+        });
+        stage.append(slots, chips);
+      },
+      (s, n) => mcq(s, n, "O Pedro acordou e consegue engolir, mas ainda está tremendo. O que você faz?", [
+        { t: "Dou 15 g de açúcar de absorção rápida (cerca de meio copo de suco ou de refrigerante comum), meço a glicose de novo em 15 minutos e aviso um responsável", ok: true, msg: "Isso! É a regra dos 15: 15 g de açúcar e nova medida em 15 minutos." },
+        { t: "Dou um refrigerante diet", msg: "Refrigerante diet não tem açúcar. A glicose não ia subir." },
+        { t: "Dou um sanduíche de queijo e espero", msg: "Gordura e proteína demoram para virar energia. Ele precisa de açúcar rápido." },
+        { t: "Mando ele voltar para a aula para o corpo reagir", msg: "Exercício gasta mais glicose e pioraria o Pedro." }
+      ], "Parte 2 de 2")
+    ]);
+  }
+];
+
+/* ---------------- Phase completion ---------------- */
+function finishPhase(i) {
+  if (S.phase !== i) return;
+  const base = Math.max(400, 1000 - S.phaseErr * 100);
+  let bonus = 0;
+  if (S.phaseErr === 0) { S.streak++; bonus = Math.min(300, (S.streak - 1) * 100); } else S.streak = 0;
+  const pts = base + bonus;
+  S.score += pts; S.phase = i + 1; cur = null;
+  closeModal(); refreshStations(); updateHUD();
+  showBanner(S.phaseErr === 0 ? "Perfeito" : "Certo", "+" + pts + " pts", S.streak >= 2 ? `Sequência sem erros: ${S.streak} (bônus +${bonus})` : `Estação ${S.phase} de ${N} concluída`, S.phaseErr === 0 ? "#13897d" : "#2f6fd0");
+  burst(PHASES[i].pos[0], 1.8, PHASES[i].pos[1], 30);
+  sfx.win();
+  if (S.phase >= N) setTimeout(startEnding, 1400);
+}
+function showBanner(big, pts, small, bg) {
+  const b = $("#banner"); b.innerHTML = ""; b.style.background = bg;
+  b.append(el("div", "big", big), el("div", "pts", pts), el("div", "streak", small));
+  b.hidden = false; clearTimeout(showBanner._t); showBanner._t = setTimeout(() => b.hidden = true, 1700);
+}
+function startEnding() {
+  S.mode = "ending"; S.won = true;
+  const bonus = Math.round(S.time * 2); S.timeBonus = bonus; S.score += bonus; updateHUD();
+  $("#talk").hidden = true; $("#helpline").hidden = true;
+  pedroLying.g.visible = false; pedroUp.g.visible = true; blanket.position.y = 0.82;
+  burst(-1.5, 1.8, 0.6, 70);
+  setTimeout(() => showEnd(true), 3400);
+}
+function timeUp() {
+  S.mode = "over"; S.won = false; S.timeBonus = 0; closeModal(); $("#talk").hidden = true; $("#helpline").hidden = true;
+  showBanner("Tempo esgotado", S.score + " pts", `Você chegou à estação ${Math.min(N, S.phase + 1)}`, "#c43d3d");
+  setTimeout(() => showEnd(false), 1800);
+}
+
+/* ---------------- End screen ---------------- */
+function showEnd(won) {
+  $("#hud").hidden = true; $("#objective").hidden = true; $("#joy").hidden = true; $("#helpline").hidden = true;
+  const scr = $("#endScreen"); scr.innerHTML = ""; scr.hidden = false;
+  const card = el("div", "card stack"); card.style.maxWidth = "700px";
+  card.append(el("div", "eyebrow", won ? "Caso resolvido" : "Fim do plantão"));
+  card.append(el("h1", null, won ? "Pedro está bem" : "Tempo esgotado"));
+  card.append(el("p", null, won ? `Bom trabalho, ${S.name}. O Pedro teve hipoglicemia (glicose baixa) por ficar muito tempo sem comer e fazer exercício. Com 15 g de açúcar, a glicose dele subiu para 92 mg/dL.` : `${S.name}, o tempo acabou antes do fim do caso. Veja o resumo e tente de novo.`));
+  const st = el("div", "stats");
+  [[S.score.toLocaleString("pt-BR"), "pontos"], [fmt(TOTAL - S.time), "tempo usado"], [S.errors, "erros"], [S.hints, "dicas"]].forEach(s => { const d = el("div", "stat"); d.append(el("b", null, String(s[0])), el("span", null, s[1])); st.append(d); });
+  card.append(st);
+  if (won && S.timeBonus) card.append(el("p", "note-pause", `Inclui bônus de tempo: +${S.timeBonus} pts (2 por segundo que sobrou).`));
+  card.append(el("h2", null, "Resumo de 1 minuto"));
+  const ul = el("ul", "summary");
+  PHASES.forEach(p => { const li = el("li"); const im = el("img"); im.src = portraits[p.key]; im.alt = ""; const tx = el("div"); tx.append(el("b", null, p.station + ": "), document.createTextNode(p.summary)); li.append(im, tx); ul.append(li); });
+  card.append(ul);
+  card.append(el("div", "safety", "Na vida real: se a pessoa estiver desmaiada ou não conseguir engolir, não dê nada pela boca, porque ela pode engasgar. Deite-a de lado e ligue para o SAMU (192)."));
+  const row = el("div", "row");
+  const r = el("button", "btn", "Ver ranking"); r.type = "button"; r.onclick = () => showRanking("end");
+  const again = el("button", "btn ghost", "Jogar de novo"); again.type = "button"; again.onclick = restart;
+  row.append(r, again); card.append(row);
+  const saveNote = el("p", "note-pause"); saveNote.id = "saveNote"; card.append(saveNote);
+  scr.append(card); scr.scrollTop = 0;
+  saveScore().then(msg => { const n = $("#saveNote"); if (n) n.textContent = msg; });
+}
+
+/* ---------------- Ranking ---------------- */
+let db = null, user = null, tts = null, canClear = false;
+const shared = { ready: false, rows: [], failed: false, slow: false };
+const LOCAL_KEY = "pedro-ranking-v3";
+const localRows = () => store.get(LOCAL_KEY, []);
+let rankMode = "local";
+async function initCaps() {
+  if (!window.claude || typeof window.claude.use !== "function") return;
+  claude.use("tts").then(t => { tts = t; document.querySelectorAll("[data-speak]").forEach(b => b.hidden = !tts); }).catch(() => {});
+  try { db = await claude.use("db"); } catch (e) { db = null; }
+  try { user = await claude.use("user"); } catch (e) { user = null; }
+  if (user) { try { canClear = !!(await user.canEdit()); } catch (e) { canClear = false; } }
+  if (!db) return;
+  rankMode = "shared";
+  const timer = setTimeout(() => { if (!shared.ready) { shared.slow = true; renderRankingIfOpen(); } }, 10000);
+  try {
+    db.collection("ranking").orderBy("score", "desc").limit(100).onSnapshot(snap => {
+      shared.rows = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+      if (!snap.metadata.fromCache) { shared.ready = true; shared.slow = false; clearTimeout(timer); }
+      renderRankingIfOpen();
+    }, () => { clearTimeout(timer); shared.failed = true; rankMode = "local"; renderRankingIfOpen(); });
+  } catch (e) { shared.failed = true; rankMode = "local"; }
+}
+async function saveScore() {
+  if (S.savedId) return "";
+  const entry = { name: S.name, avatar: "nurse", score: S.score, seconds: Math.round(TOTAL - S.time), errors: S.errors, hints: S.hints, won: S.won, at: Date.now() };
+  S.savedId = "local-" + entry.at + "-" + Math.random().toString(36).slice(2, 7);
+  const loc = localRows(); loc.push(Object.assign({ id: S.savedId }, entry)); loc.sort((a, b) => b.score - a.score); store.set(LOCAL_KEY, loc.slice(0, 100));
+  if (db && rankMode === "shared") {
+    try { const ref = await db.collection("ranking").add(entry); S.savedId = ref.id; return "Sua pontuação entrou no ranking da turma."; }
+    catch (e) { return "Não deu para enviar ao ranking da turma; o resultado ficou salvo neste aparelho."; }
+  }
+  return "Resultado salvo no ranking deste aparelho.";
+}
+let rankFrom = "start", clearArmed = false;
+function showRanking(from) { rankFrom = from; clearArmed = false; $("#startScreen").hidden = true; $("#endScreen").hidden = true; $("#rankScreen").hidden = false; renderRanking(true); }
+function renderRankingIfOpen() { if (!$("#rankScreen").hidden) renderRanking(false); }
+function currentRows() {
+  const savedLocalOnly = S.savedId && String(S.savedId).indexOf("local-") === 0;
+  if (rankMode === "shared" && !shared.failed && (shared.ready || shared.rows.length) && !savedLocalOnly) return { rows: shared.rows, mode: "shared" };
+  return { rows: localRows(), mode: "local" };
+}
+function renderRanking(animate) {
+  const scr = $("#rankScreen"); scr.innerHTML = "";
+  const card = el("div", "card rank-card stack");
+  card.append(el("h1", null, "Ranking"));
+  const { rows, mode } = currentRows();
+  let note = mode === "shared" ? "Ranking da turma · atualiza ao vivo" : "Ranking deste aparelho";
+  if (mode === "shared" && shared.slow && !shared.ready) note = "Carregando o ranking da turma… pode estar desatualizado.";
+  card.append(el("p", "rank-note", note));
+  const sorted = rows.slice().sort((a, b) => (b.score || 0) - (a.score || 0) || (a.seconds || 0) - (b.seconds || 0));
+  if (!sorted.length) card.append(el("div", "rank-empty", "Ninguém terminou o caso ainda. Seja a primeira pessoa a ajudar o Pedro."));
+  else {
+    const pod = el("div", "podium"), H = { 1: 78, 2: 58, 3: 42 };
+    [2, 1, 3].forEach(pos => {
+      const r = sorted[pos - 1]; const d = el("div", "pod p" + pos + (r ? "" : " empty"));
+      const im = el("img"); im.alt = ""; im.src = portraits.nurse || ""; d.append(im);
+      d.append(el("div", "pn", r ? String(r.name || "Jogador").slice(0, 16) : "—"), el("div", "ps", r ? (Number(r.score) || 0).toLocaleString("pt-BR") + " pts" : ""));
+      const bar = el("div", "bar", String(pos)); d.append(bar); pod.append(d);
+      const h = r ? H[pos] : 8;
+      if (animate) requestAnimationFrame(() => requestAnimationFrame(() => bar.style.height = h + "%")); else { bar.style.transition = "none"; bar.style.height = h + "%"; }
+    });
+    card.append(pod);
+    const list = el("ol", "rank-list");
+    sorted.slice(3, 30).forEach((r, k) => { const li = el("li"); if (r.id === S.savedId) li.classList.add("me"); li.append(el("span", "pos", String(k + 4)), el("span", "nm", String(r.name || "Jogador").slice(0, 16)), el("span", "sc", (Number(r.score) || 0).toLocaleString("pt-BR"))); list.append(li); });
+    if (list.children.length) card.append(list);
+    const myIdx = sorted.findIndex(r => r.id === S.savedId);
+    if (myIdx >= 0) card.append(el("p", "rank-note", `Você ficou em ${myIdx + 1}º lugar de ${sorted.length}.`));
+  }
+  const row = el("div", "row rank-actions");
+  const play = el("button", "btn", S.mode === "start" ? "Jogar" : "Jogar de novo"); play.type = "button";
+  play.onclick = () => { $("#rankScreen").hidden = true; if (S.mode === "start") $("#startScreen").hidden = false; else restart(); };
+  row.append(play);
+  if (rankFrom === "end") { const back = el("button", "btn ghost", "Voltar ao resumo"); back.type = "button"; back.onclick = () => { $("#rankScreen").hidden = true; $("#endScreen").hidden = false; }; row.append(back); }
+  card.append(row);
+  if ((mode === "shared" && canClear) || mode === "local") {
+    const t = el("div", "teacher");
+    const c = el("button", "linkish", clearArmed ? "Tem certeza? Toque de novo para apagar tudo" : (mode === "shared" ? "Zerar ranking da turma (professor)" : "Zerar ranking deste aparelho")); c.type = "button";
+    c.onclick = async () => {
+      if (!clearArmed) { clearArmed = true; renderRanking(false); return; }
+      clearArmed = false;
+      if (mode === "shared") { for (const r of shared.rows.slice()) { try { await db.doc("ranking/" + r.id).delete(); } catch (e) {} } }
+      store.set(LOCAL_KEY, []); renderRanking(false); toast("Ranking zerado.");
+    };
+    t.append(c); card.append(t);
+  }
+  scr.append(card);
+}
+
+/* ---------------- Speech (optional) ---------------- */
+let speaking = false;
+function speakButton(text) {
+  const b = el("button", "btn ghost", "Ouvir"); b.type = "button"; b.dataset.speak = "1"; b.hidden = !tts;
+  b.onclick = () => {
+    if (!tts) return;
+    if (speaking) { tts.stop().catch(() => {}); return; }
+    speaking = true; b.textContent = "Parar";
+    tts.speak(text.slice(0, 1990), { voice: "glassy", language: "pt-BR" }).catch(e => { if (e && e.code === "not_granted") { tts = null; b.hidden = true; } }).finally(() => { speaking = false; b.textContent = "Ouvir"; });
+  };
+  return b;
+}
+function stopSpeech() { if (tts && speaking) tts.stop().catch(() => {}); }
+
+/* ---------------- Start / restart ---------------- */
+try { const n = store.get("pedro-name", ""); if (n) $("#nameInput").value = n; } catch (e) {}
+$("#nameInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#startBtn").click(); });
+$("#startBtn").onclick = () => {
+  const name = $("#nameInput").value.replace(/\s+/g, " ").trim().slice(0, 16);
+  if (!name) { $("#nameErr").textContent = "Digite seu nome para aparecer no ranking."; $("#nameInput").focus(); return; }
+  $("#nameErr").textContent = ""; store.set("pedro-name", name);
+  S.name = name; beginGame();
+};
+$("#rankFromStart").onclick = () => showRanking("start");
+const rootEl = document.documentElement;
+if (rootEl.requestFullscreen || rootEl.webkitRequestFullscreen) {
+  $("#fsBtn").hidden = false;
+  $("#fsBtn").onclick = () => {
+    try {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      const p = fsEl ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (rootEl.requestFullscreen || rootEl.webkitRequestFullscreen).call(rootEl);
+      if (p && p.catch) p.catch(() => toast("Este navegador não deixou abrir em tela cheia."));
+    } catch (e) { toast("Este navegador não deixou abrir em tela cheia."); }
+  };
+}
+$("#muteBtn").onclick = () => { muted = !muted; $("#muteBtn").textContent = muted ? "×" : "♪"; $("#muteBtn").setAttribute("aria-label", muted ? "Som desligado" : "Som ligado"); };
+
+function beginGame() {
+  Object.assign(S, { mode: "briefing", phase: 0, time: TOTAL, score: 0, errors: 0, hints: 0, streak: 0, won: false, savedId: null, timeBonus: 0 });
+  buildPlayer(); look.yaw = 0; look.pitch = 0; snapCamera = true;
+  pedroLying.g.visible = true; pedroUp.g.visible = false; blanket.position.y = 1.08; refreshStations();
+  $("#startScreen").hidden = true; $("#endScreen").hidden = true; $("#rankScreen").hidden = true;
+  $("#hud").hidden = false; $("#objective").hidden = false; $("#joy").hidden = !isTouch; $("#helpline").hidden = isTouch;
+  $("#hudName").textContent = S.name; $("#hudAvatar").src = portraits.nurse || "";
+  lastShown = -1; updateHUD();
+  modal.innerHTML = ""; openModal("lesson");
+  const panel = el("div", "panel");
+  panel.append(panelHead(portraits.pedro, "Caso · enfermaria da escola", "Paciente: Pedro, 16 anos", null));
+  const body = el("div", "panel-body");
+  const c = el("div", "concept");
+  c.append(el("h3", null, "O que aconteceu"),
+    el("p", null, "O Pedro não tomou café da manhã e está há 12 horas sem comer. Na aula de Educação Física, ficou pálido, começou a tremer, suou frio e desmaiou por alguns instantes. Ele está em jejum e num estado de estresse pós-exercício. Agora está deitado na maca, sonolento e confuso."),
+    el("p", null, `${S.name}, você é a enfermeira de plantão. A enfermaria tem ${N} estações. Em cada uma, leia o quadro e resolva o desafio para liberar a próxima. A estação certa tem uma seta amarela em cima.`));
+  body.append(c);
+  const board = el("div", "board");
+  const r = el("div", "refs"); r.append(el("h3", null, "Regras"));
+  const tb = el("table"); [["Tempo total", "20 min"], ["Lendo o quadro", "tempo parado"], ["Cada dica", "−1 min"], ["Cada erro", "−100 pts"]].forEach(row => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", null, row[1])); tb.append(tr); }); r.append(tb);
+  const cl = el("div", "clinical"); cl.append(el("h3", null, "Pontos"), el("p", null, "Até 1000 pontos por estação, bônus quando você acerta várias estações seguidas sem errar e 2 pontos por segundo que sobrar no final."));
+  board.append(r, cl); body.append(board);
+  const foot = el("div", "panel-foot"); foot.append(el("span", "spacer"));
+  const go = el("button", "btn", "Começar plantão"); go.type = "button";
+  go.onclick = () => { closeModal(); S.mode = "play"; toast(isTouch ? (innerHeight > innerWidth ? "Dica: deite o celular. Use o joystick para ir até a estação 1, à esquerda." : "Use o joystick para ir até a estação 1, à esquerda.") :"Use W e A/D para ir até a estação 1, à esquerda."); };
+  foot.append(go); body.append(foot); panel.append(body); modal.append(panel);
+  setTimeout(() => go.focus({ preventScroll: true }), 50);
+}
+function restart() { $("#endScreen").hidden = true; $("#rankScreen").hidden = true; beginGame(); }
+
+/* ---------------- Input ---------------- */
+addEventListener("keydown", e => {
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) return;
+  keys[e.code] = true;
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code) && S.mode === "play" && !S.modal) e.preventDefault();
+  if ((e.code === "KeyE" || e.code === "Enter" || e.code === "Space") && S.mode === "play" && !S.modal && near !== null) { e.preventDefault(); interact(); }
+});
+addEventListener("keyup", e => { keys[e.code] = false; });
+addEventListener("blur", () => { for (const k in keys) keys[k] = false; look.dragging = false; });
+// drag on the world to look around (camera yaw/pitch offset)
+canvas.addEventListener("pointerdown", e => { if (S.mode !== "play" || S.modal) return; look.dragging = true; look.lx = e.clientX; look.ly = e.clientY; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", e => {
+  if (!look.dragging) return;
+  look.yaw -= (e.clientX - look.lx) * 0.006; look.pitch = Math.max(-0.5, Math.min(0.7, look.pitch + (e.clientY - look.ly) * 0.004));
+  look.lx = e.clientX; look.ly = e.clientY; look.idle = 0;
+});
+const endDrag = () => { look.dragging = false; };
+canvas.addEventListener("pointerup", endDrag); canvas.addEventListener("pointercancel", endDrag);
+const joy = $("#joy"), knob = $("#knob"); let joyId = null;
+function joyMove(e) { const r = joy.getBoundingClientRect(); let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); const Lh = Math.hypot(dx, dy), R = 42; if (Lh > R) { dx *= R / Lh; dy *= R / Lh; } knob.style.transform = `translate(${dx}px,${dy}px)`; joyV.x = dx / R; joyV.y = dy / R; }
+joy.addEventListener("pointerdown", e => { joyId = e.pointerId; joy.setPointerCapture(e.pointerId); joyMove(e); });
+joy.addEventListener("pointermove", e => { if (e.pointerId === joyId) joyMove(e); });
+const joyEnd = e => { if (e.pointerId !== joyId) return; joyId = null; joyV.x = joyV.y = 0; knob.style.transform = ""; };
+joy.addEventListener("pointerup", joyEnd); joy.addEventListener("pointercancel", joyEnd);
+$("#talk").onclick = () => interact();
+
+let near = null;
+function interact() {
+  if (near === null || S.mode !== "play" || S.modal) return;
+  if (near === "pedro") { toast(S.phase < N ? "Pedro está sonolento e confuso. Monitor: glicose 48 mg/dL, coração a 118 por minuto." : "Pedro está estável."); sfx.talk(); return; }
+  if (near < S.phase) openLesson(near, true);
+  else if (near === S.phase) openLesson(near, false);
+  else toast(`Termine a estação ${S.phase + 1} primeiro.`);
+}
+
+/* ---------------- Loop ---------------- */
+const clock = new THREE.Clock();
+const camPos = new THREE.Vector3(0, 2.6, 9), camLook = new THREE.Vector3(0, 1, 0);
+let snapCamera = false;
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = camera.aspect < 0.8 ? 70 : 58; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+function collide(p) {
+  const R = 0.38;
+  for (const o of obstacles) {
+    if (o.box) {
+      const [x0, x1, z0, z1] = o.box;
+      if (p.x > x0 - R && p.x < x1 + R && p.z > z0 - R && p.z < z1 + R) {
+        const dl = p.x - (x0 - R), dr = (x1 + R) - p.x, dn = p.z - (z0 - R), df = (z1 + R) - p.z, m = Math.min(dl, dr, dn, df);
+        if (m === dl) p.x = x0 - R; else if (m === dr) p.x = x1 + R; else if (m === dn) p.z = z0 - R; else p.z = z1 + R;
+      }
+    } else {
+      const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + R;
+      if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
+    }
+  }
+  p.x = Math.max(-11.4, Math.min(11.4, p.x)); p.z = Math.max(-11.4, Math.min(11.4, p.z));
+}
+const pose = { aR: 0, aL: 0, lR: 0, lL: 0, by: 0 };
+const tmpV = new THREE.Vector3(), tmpL = new THREE.Vector3();
+let monitorT = 0;
+function tick() {
+  const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
+  const pg = player.g;
+  let fwd = 0, turn = 0;
+  if (S.mode === "play" && !S.modal) {
+    if (keys.KeyW) fwd += 1; if (keys.KeyS) fwd -= 1;
+    if (keys.KeyA) turn += 1; if (keys.KeyD) turn -= 1;
+    fwd -= joyV.y; turn -= joyV.x;
+  }
+  // arrow keys orbit the camera around the nurse
+  const camKeys = S.mode === "play" && !S.modal && (keys.ArrowLeft || keys.ArrowRight || keys.ArrowUp || keys.ArrowDown);
+  if (camKeys) {
+    if (keys.ArrowLeft) look.yaw -= 1.9 * dt; if (keys.ArrowRight) look.yaw += 1.9 * dt;
+    if (keys.ArrowUp) look.pitch = Math.max(-0.5, look.pitch - 0.9 * dt); if (keys.ArrowDown) look.pitch = Math.min(0.7, look.pitch + 0.9 * dt);
+  }
+  fwd = Math.max(-1, Math.min(1, fwd)); turn = Math.max(-1, Math.min(1, turn));
+  player.heading += turn * 2.3 * dt;
+  const moving = Math.abs(fwd) > 0.08;
+  if (moving) {
+    const sp = (fwd > 0 ? 3.6 : 2.0) * fwd;
+    pg.position.x += Math.sin(player.heading) * sp * dt; pg.position.z += Math.cos(player.heading) * sp * dt; collide(pg.position);
+    player.walk += dt * 8.5 * Math.sign(fwd);
+  }
+  pg.rotation.y = player.heading;
+  // when the player moves or turns and is not dragging, the look offset eases back behind the shoulder
+  if (!look.dragging && !camKeys && (moving || Math.abs(turn) > 0.08)) { look.yaw *= Math.pow(0.04, dt); look.pitch *= Math.pow(0.1, dt); }
+  const s = Math.sin(player.walk), k = 1 - Math.pow(0.0005, dt), walking = moving || Math.abs(turn) > 0.3;
+  const tp = walking ? { aR: -.6 * s, aL: .6 * s, lR: .5 * s, lL: -.5 * s, by: Math.abs(Math.cos(player.walk)) * .7 } : { aR: .04 * Math.sin(t * 1.8), aL: -.04 * Math.sin(t * 1.8), lR: 0, lL: 0, by: .25 * Math.sin(t * 1.8) };
+  if (!moving && Math.abs(turn) > 0.3) player.walk += dt * 6;
+  for (const key in pose) pose[key] += (tp[key] - pose[key]) * k;
+  player.rig.armR.rotation.set(pose.aR, 0, -.06); player.rig.armL.rotation.set(pose.aL, 0, .06);
+  player.rig.legR.rotation.x = pose.lR; player.rig.legL.rotation.x = pose.lL; player.rig.body.position.y = pose.by;
+
+  // camera
+  if (S.mode === "start") {
+    const a = t * 0.12; tmpV.set(Math.sin(a) * 7.5, 2.7, Math.cos(a) * 7.5); tmpL.set(0, 1.0, 0);
+    camPos.lerp(tmpV, 0.04); camLook.lerp(tmpL, 0.08);
+  } else if (S.mode === "ending" || S.mode === "over") {
+    tmpV.set(-0.2, 2.2, 4.4); tmpL.set(-0.9, 1.2, 0.3); camPos.lerp(tmpV, 0.04); camLook.lerp(tmpL, 0.06);
+  } else {
+    // over-the-shoulder third-person camera
+    const yaw = player.heading + look.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
+    const dist = camera.aspect < 0.8 ? 6.0 : 5.2;
+    tmpV.set(pg.position.x - fx * dist + rx * 0.8, 2.6 + look.pitch * 1.2, pg.position.z - fz * dist + rz * 0.7);
+    tmpV.x = Math.max(-11.6, Math.min(11.6, tmpV.x)); tmpV.z = Math.max(-11.6, Math.min(11.6, tmpV.z)); tmpV.y = Math.min(RH - 0.25, tmpV.y);
+    tmpL.set(pg.position.x + fx * 5 + rx * 0.35, 1.35 - look.pitch * 2.2, pg.position.z + fz * 5 + rz * 0.35);
+    const a = snapCamera ? 1 : 1 - Math.pow(0.0008, dt);
+    camPos.lerp(tmpV, a); camLook.lerp(tmpL, snapCamera ? 1 : 1 - Math.pow(0.0004, dt)); snapCamera = false;
+  }
+  camera.position.copy(camPos); camera.lookAt(camLook);
+
+  near = null; let best = 2.4;
+  stations.forEach((st, i) => {
+    const u = st.holder.userData;
+    if (u.spin) u.spin.rotation.y += dt * 0.9;
+    if (u.spinSlow) u.spinSlow.rotation.y += dt * 0.4;
+    if (S.mode === "play") { const d = Math.hypot(pg.position.x - st.p.pos[0], pg.position.z - st.p.pos[1]); if (d < best) { best = d; near = i; } }
+  });
+  if (S.mode === "play" && near === null && Math.hypot(pg.position.x, pg.position.z) < 2.3) near = "pedro";
+  const cs = stations[Math.min(S.phase, N - 1)];
+  ring.visible = arrow.visible = S.phase < N && S.mode !== "start";
+  ring.position.x = cs.p.pos[0]; ring.position.z = cs.p.pos[1]; ring.material.opacity = 0.5 + Math.sin(t * 4) * 0.25;
+  arrow.position.set(cs.p.pos[0], 3.1 + Math.sin(t * 4) * 0.08, cs.p.pos[1]); arrow.rotation.y = t * 1.2;
+  const tb = $("#talk");
+  if (S.mode === "play" && !S.modal && near !== null) {
+    const label = near === "pedro" ? "Examinar o Pedro" : near > S.phase ? "Estação bloqueada" : `Examinar: ${PHASES[near].station}`;
+    const full = label + (isTouch ? "" : " (E)");
+    if (tb.textContent !== full) tb.textContent = full;
+    tb.hidden = false;
+  } else tb.hidden = true;
+
+  monitorT += dt; if (monitorT > 0.08) { drawMonitor(t, S.won && S.mode !== "play"); monitorT = 0; }
+  if (pedroUp.g.visible) { const w = Math.sin(t * 7); pedroUp.rig.armR.rotation.set(0, 0, -2.5 + .3 * w); pedroUp.rig.body.position.y = .15 * Math.sin(t * 1.8); }
+  for (let q = confetti.length - 1; q >= 0; q--) {
+    const c = confetti[q]; c.v.y -= 9 * dt; c.m.position.addScaledVector(c.v, dt); c.m.rotation.x += dt * 6; c.life -= dt;
+    if (c.m.position.y > RH - 0.1) { c.m.position.y = RH - 0.1; c.v.y = -Math.abs(c.v.y) * 0.3; }
+    if (c.m.position.y < 0.04) { c.m.position.y = 0.04; c.v.set(0, 0, 0); }
+    if (c.life <= 0) { scene.remove(c.m); confetti.splice(q, 1); }
+  }
+  if (S.mode === "play" && S.modal !== "lesson") { S.time -= dt; if (S.time <= 0) { S.time = 0; updateHUD(); timeUp(); } }
+  if (S.mode === "play" || S.mode === "briefing") updateHUD();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+/* ---------------- Boot ---------------- */
+const fontsReady = Promise.race([Promise.all([document.fonts.load("36px Silkscreen"), document.fonts.load("600 30px Inter"), document.fonts.load("600 22px 'IBM Plex Mono'")]).catch(() => {}), new Promise(r => setTimeout(r, 1800))]);
+fontsReady.then(() => { makePortraits(); refreshStations(); });
+refreshStations();
+initCaps();
+requestAnimationFrame(tick);})();
+</script>
+</body>
+</html>
