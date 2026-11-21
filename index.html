@@ -451,9 +451,14 @@ function chunky(build) {
   const outer = new THREE.Group(), model = new THREE.Group(); model.scale.setScalar(CS); outer.add(model);
   const body = group(model);
   const rig = { body };
-  rig.legR = group(body, -3, 5, 0); rig.legL = group(body, 3, 5, 0);
-  rig.armR = group(body, -8.2, 13.5, 0); rig.armL = group(body, 8.2, 13.5, 0);
-  build(rig, (w, h, d, c, x, y, z, p) => box(w, h, d, c, x, y, z, p));
+  // slim proportions: body and limbs are narrower and a bit taller, the head is only slightly narrower
+  const SX = 0.64, SY = 1.12, SZ = 0.7, HX = 0.88, HY = 0.95, HZ = 0.9;
+  rig.legR = group(body, -3 * SX, 5 * SY, 0); rig.legL = group(body, 3 * SX, 5 * SY, 0);
+  rig.armR = group(body, -8.2 * SX, 13.5 * SY, 0); rig.armL = group(body, 8.2 * SX, 13.5 * SY, 0);
+  build(rig, (w, h, d, c, x, y, z, p) => p && p === rig.head
+    ? box(w * HX, h * HY, d * HZ, c, x * HX, y * HY, z * HZ, p)
+    : box(w * SX, h * SY, d * SZ, c, x * SX, y * SY, z * SZ, p));
+  if (rig.head) rig.head.position.y *= SY;
   return { g: outer, rig };
 }
 function face(hd, b, o) {
