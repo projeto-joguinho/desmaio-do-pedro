@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: full-screen third-person voxel infirmary (canvas) with clinical report panels on top. Single light clinical look. */
 :root{
@@ -211,6 +211,59 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 #skipCut{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:calc(9vh + 12px);pointer-events:auto}
 #thanks{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:28;pointer-events:none}#thanks .btn{pointer-events:auto}
 #fade{position:fixed;inset:0;background:#0d0f14;opacity:0;pointer-events:none;z-index:39}
+/* Station boards: chalkboard with a block wood frame (Press Start 2P titles, VT323 chalk text) */
+.panel{background:#2f6b57;color:#f4fff8;border:10px solid #c98d57;border-radius:0;box-shadow:inset 0 0 0 3px #1d4537,0 8px 0 #8a5a3c,0 18px 40px rgba(0,0,0,.3);font-family:"VT323",monospace;font-size:21px;line-height:1.15}
+.panel-head{background:#285c4b;border-bottom:3px dashed rgba(244,255,248,.22)}
+.panel-head img{background:#f4fff8;border:3px solid #c98d57;border-radius:0}
+.panel-head .eyebrow{font-family:"VT323",monospace;font-size:19px;letter-spacing:.04em;text-transform:none;font-weight:400;color:#bfe3d3}
+.panel-head h2{font-family:"Press Start 2P",monospace;font-weight:400;font-size:clamp(13px,2.4vw,17px);line-height:1.4;color:#ffd45c;text-shadow:3px 3px 0 #1d4537;margin:4px 0 0}
+.panel .icon-btn{border-radius:0;background:#f4fff8;color:#1d4537;border:0;box-shadow:0 3px 0 #1d4537}
+.panel h3{font-family:"Press Start 2P",monospace!important;font-size:10px!important;letter-spacing:.04em!important;font-weight:400!important;color:#ffd45c!important;text-transform:none!important;margin-bottom:6px}
+.panel p,.panel li{margin:0;line-height:1.2}
+.concept{font-size:22px;gap:8px;max-width:none}
+.concept p::before{content:"> ";color:#8fe0b5}
+.board > div{border-radius:0}
+.refs{background:#285c4b;border:2px solid #1d4537}
+.refs table{font-size:20px}
+.refs td{border-bottom:1px dashed rgba(244,255,248,.25)}
+.refs td:last-child{font-family:"VT323",monospace;color:#8fe0b5;font-weight:400}
+.clinical{background:rgba(255,143,168,.12);border:2px solid #ff8fa8;font-size:21px;line-height:1.15}
+.clinical h3{color:#ff9fb6!important}
+.panel .note-pause{color:#bfe3d3;font-size:18px}
+.panel .btn{font-family:"VT323",monospace;font-size:22px;font-weight:400;border-radius:0;padding:8px 16px;background:#ffd45c;color:#3b2a05;box-shadow:0 4px 0 #b48a1f}
+.panel .btn:active{box-shadow:0 1px 0 #b48a1f}
+.panel .btn.ghost{background:transparent;color:#f4fff8;border:2px solid #f4fff8;box-shadow:0 4px 0 #1d4537}
+.panel .btn.teal{background:#8fe0b5;color:#1d4537;box-shadow:0 4px 0 #4f9e78}
+.panel .btn:disabled{opacity:.5}
+.step-label{font-family:"Press Start 2P",monospace;font-weight:400;font-size:10px;letter-spacing:.04em;text-transform:none;color:#ffd45c}
+.q-text{font-family:"VT323",monospace;font-weight:400;font-size:26px;line-height:1.1;color:#fff}
+.opt{border-radius:0;font-family:"VT323",monospace;font-weight:400;font-size:22px;line-height:1.05;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+.opt.is-ok{outline-color:#ffd45c}
+.fb{font-family:"VT323",monospace;font-weight:400;font-size:22px;border-radius:0}
+.fb.ok{background:#8fe0b5;color:#1d4537}
+.fb.bad{background:#ff8fa8;color:#5a1426}
+.ficha{border-radius:0;border:3px solid #c98d57;font-family:"VT323",monospace;color:#1b2333}
+.ficha .fh{background:#1d4537;font-family:"Press Start 2P",monospace;font-weight:400;font-size:10px}
+.ficha table{font-size:20px}
+.ficha .val,.ficha .ref{font-family:"VT323",monospace}
+.ficha .ref{font-size:17px}
+.chip{border-radius:0;border:0;background:#f4fff8;color:#1d4537;font-family:"VT323",monospace;font-weight:400;font-size:21px;box-shadow:0 3px 0 #1d4537}
+.chip small{font-family:"VT323",monospace;font-size:16px;color:#4f6f62}
+.chip.sel{background:#ffd45c;box-shadow:0 3px 0 #b48a1f}
+.bin{border-radius:0;border:2px dashed rgba(244,255,248,.45);background:#285c4b;color:#f4fff8;font-family:"VT323",monospace}
+.bin .bt{font-family:"Press Start 2P",monospace;font-weight:400;font-size:11px;color:#ffd45c}
+.bin .bs{font-size:17px;color:#bfe3d3}
+.bin .in span{border-radius:0;border:0;background:#f4fff8;color:#1d4537;font-weight:400;font-size:17px}
+.bin.ready{border:2px solid #ffd45c;background:#346f5b}
+.mbtn{border-radius:0;border:2px solid transparent;background:#f4fff8;color:#1d4537;font-family:"VT323",monospace;font-weight:400;font-size:21px;line-height:1.05;box-shadow:0 3px 0 #1d4537}
+.mbtn.term{font-weight:400;font-size:22px}
+.mbtn.sel{background:#ffd45c;border-color:#b48a1f}
+.slots{border-radius:0;background:#285c4b;border:2px dashed rgba(244,255,248,.45)}
+.slots .s{border-radius:0;background:#ffd45c;color:#3b2a05;font-family:"VT323",monospace;font-weight:400;font-size:20px}
+.slots .s small{font-size:15px}
+.slots .arrow{color:#8fe0b5}
+.slots .ph{color:#bfe3d3;font-size:18px}
+@media (max-width:640px){ .concept{font-size:21px} .panel{border-width:7px} }
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
 <meta name="theme-color" content="#14213d">
@@ -357,48 +410,48 @@ const PHASES = [
   {
     key: "triagem", station: "Triagem", title: "Glicose e glicemia", color: "#c43d3d", pos: [-6.0, 1.5],
     paras: [
-      "A glicose é um tipo de açúcar (fórmula C₆H₁₂O₆). Ela vem principalmente dos alimentos com carboidrato, como pão, arroz e frutas, e é levada pelo sangue até as células.",
-      "Ela é o principal combustível do corpo. O cérebro é quem mais depende dela: gasta cerca de 120 g de glicose por dia e não consegue guardar estoque.",
-      "Glicemia é a quantidade de glicose no sangue. Ela muda ao longo do dia: sobe no estado pós-prandial (logo depois de comer) e cai no jejum (muitas horas sem comer). O corpo trabalha o tempo todo para manter esse valor estável."
+      "A glicose é um açúcar (C₆H₁₂O₆) que vem dos alimentos com carboidrato, como pão, arroz e frutas. O sangue leva a glicose até as células.",
+      "Ela é o principal combustível do corpo. O cérebro é quem mais depende dela: gasta cerca de 120 g por dia e não guarda estoque.",
+      "Glicemia é a quantidade de glicose no sangue. Ela sobe no estado pós-prandial (logo depois de comer) e cai no jejum (muitas horas sem comer)."
     ],
     refs: [["Normal em jejum", "70 a 99 mg/dL"], ["Pós-prandial (2 h após comer)", "até 140 mg/dL"], ["Glicose baixa (hipoglicemia)", "abaixo de 70"], ["Glicose muito baixa", "abaixo de 54"], ["mg/dL", "miligramas por decilitro"]],
-    clinical: "O Pedro está em jejum há 12 horas e, depois da Educação Física, entrou num estado de estresse pós-exercício. A glicose dele caiu para 48 mg/dL, bem abaixo do normal. Para reagir, o corpo liberou catecolaminas: adrenalina e noradrenalina, substâncias produzidas a partir da dopa. São elas que causam os tremores, o suor frio e o coração acelerado. O desmaio aconteceu porque o cérebro ficou sem combustível.",
+    clinical: "Em jejum há 12 horas e em estresse pós-exercício, o Pedro ficou com a glicose em 48 mg/dL. O corpo reagiu liberando catecolaminas (adrenalina e noradrenalina, feitas a partir da dopa), que causam tremor, suor frio e coração acelerado. Ele desmaiou porque o cérebro ficou sem combustível.",
     hint: "Compare cada resultado da ficha com o valor de referência ao lado. Releia a parte sobre as catecolaminas.",
     summary: "A glicose é o principal combustível do corpo. Abaixo de 70 mg/dL é hipoglicemia; o Pedro estava com 48 mg/dL."
   },
   {
     key: "nutricao", station: "Bioenergética", title: "Catabolismo e anabolismo", color: "#b9800f", pos: [-3.6, -5.6],
     paras: [
-      "Bioenergética é o estudo de como os seres vivos conseguem, transformam e usam energia. A energia dos alimentos fica guardada nas ligações químicas das moléculas, como a glicose, as gorduras e as proteínas.",
-      "Metabolismo é o conjunto de todas as reações químicas do corpo, e ele tem dois lados. Catabolismo é quebrar moléculas grandes em menores, o que libera energia: digerir o amido do pão até glicose, quebrar o glicogênio do fígado, queimar glicose na respiração celular. Anabolismo é o contrário: montar moléculas grandes a partir de pequenas, o que gasta energia: guardar glicose como glicogênio, formar músculo a partir de aminoácidos, guardar gordura de reserva.",
-      "Quem liga os dois lados é o ATP: o catabolismo produz ATP e o anabolismo gasta ATP. No estado pós-prandial, com comida chegando, predomina o anabolismo (o corpo guarda). No jejum e no exercício, predomina o catabolismo (o corpo usa as reservas)."
+      "Bioenergética estuda como o corpo obtém, transforma e usa energia. A energia dos alimentos fica guardada nas ligações químicas de moléculas como glicose, gorduras e proteínas.",
+      "Metabolismo são todas as reações do corpo, e tem dois lados. Catabolismo quebra moléculas grandes em menores e libera energia (digerir amido, quebrar glicogênio, queimar glicose). Anabolismo monta moléculas grandes e gasta energia (guardar glicogênio, formar músculo, guardar gordura).",
+      "O ATP liga os dois lados: o catabolismo produz ATP e o anabolismo gasta. No estado pós-prandial predomina o anabolismo (o corpo guarda). No jejum e no exercício predomina o catabolismo (o corpo usa as reservas)."
     ],
     refs: [["Catabolismo", "quebra · libera energia"], ["Anabolismo", "constrói · gasta energia"], ["Moeda de energia", "ATP"], ["Estado pós-prandial", "predomina anabolismo"], ["Jejum e exercício", "predomina catabolismo"]],
-    clinical: "Depois de 12 horas de jejum e da Educação Física, o corpo do Pedro estava em pleno catabolismo, quebrando o glicogênio do fígado e as gorduras para manter a glicose do sangue. Só que, sem carboidrato chegando, a reserva rápida de glicose acabou antes que ele conseguisse repor.",
+    clinical: "Depois de 12 horas de jejum e da Educação Física, o Pedro estava em pleno catabolismo, quebrando glicogênio e gordura para manter a glicose do sangue. Sem carboidrato chegando, a reserva rápida acabou.",
     hint: "Pergunte para cada processo: ele quebra ou monta moléculas? Quebrar libera energia (catabolismo); montar gasta energia (anabolismo).",
     summary: "Catabolismo quebra moléculas e libera energia (produz ATP); anabolismo constrói moléculas e gasta ATP. No jejum predomina o catabolismo; no pós-prandial, o anabolismo."
   },
   {
     key: "endocrino", station: "Hormônios", title: "Insulina e glucagon", color: "#2f6fd0", pos: [3.6, -5.6],
     paras: [
-      "O pâncreas é um órgão que fica atrás do estômago. Ele controla a glicose do sangue com dois hormônios, que são mensageiros químicos levados pelo sangue: a insulina e o glucagon.",
-      "No estado pós-prandial (depois de comer), a glicose sobe. O pâncreas libera insulina, que faz a glicose entrar nas células e faz o fígado guardar o excesso como glicogênio, um estoque de glicose. Resultado: a glicose do sangue baixa.",
-      "No jejum (muitas horas sem comer) ou durante o exercício, a glicose cai. O pâncreas libera glucagon, que manda o fígado quebrar o glicogênio e soltar glicose no sangue. Em situações de estresse, as catecolaminas (como a adrenalina) ajudam o glucagon nessa tarefa. Resultado: a glicose do sangue sobe."
+      "O pâncreas, atrás do estômago, controla a glicose do sangue com dois hormônios (mensageiros químicos): insulina e glucagon.",
+      "No estado pós-prandial a glicose sobe, e o pâncreas libera insulina. Ela faz a glicose entrar nas células e o fígado guardar o excesso como glicogênio. A glicose do sangue baixa.",
+      "No jejum ou no exercício a glicose cai, e o pâncreas libera glucagon. Ele manda o fígado quebrar o glicogênio e soltar glicose. No estresse, as catecolaminas (como a adrenalina) ajudam. A glicose do sangue sobe."
     ],
     refs: [["Insulina", "baixa a glicose"], ["Glucagon", "aumenta a glicose"], ["Estado pós-prandial", "predomina a insulina"], ["Jejum", "predomina o glucagon"], ["Estoque no fígado", "cerca de 100 g"]],
-    clinical: "O Pedro está em jejum há 12 horas, então o pâncreas já estava liberando glucagon, e o estresse pós-exercício somou as catecolaminas. Mesmo assim, o estoque do fígado estava acabando e os músculos gastaram muita glicose na Educação Física. O corpo não conseguiu repor a tempo.",
+    clinical: "Em jejum, o pâncreas do Pedro já liberava glucagon, e o estresse pós-exercício somou as catecolaminas. Mas o estoque do fígado estava no fim e os músculos gastaram muita glicose. O corpo não repôs a tempo.",
     hint: "Insulina e glucagon fazem coisas opostas. Pense em qual estado o Pedro está: pós-prandial ou jejum?",
     summary: "No estado pós-prandial, o pâncreas libera insulina e a glicose baixa; no jejum, libera glucagon, que usa o glicogênio do fígado para subir a glicose."
   },
   {
     key: "metabolismo", station: "Energia da célula", title: "Como a glicose vira energia", color: "#7a4fb5", pos: [6.0, 1.5],
     paras: [
-      "Dentro das células, a glicose é usada para produzir ATP. O ATP funciona como a moeda de energia da célula: é ele que paga o trabalho dos músculos, dos neurônios e de quase tudo no corpo. Esse processo se chama respiração celular.",
-      "Primeiro vem a glicólise, no citoplasma: a glicose é quebrada ao meio. Depois, os pedaços entram na mitocôndria, a usina de energia da célula, e passam pelo ciclo de Krebs.",
-      "Por fim, na cadeia respiratória, a mitocôndria usa o oxigênio que respiramos para produzir a maior parte do ATP. Sobram gás carbônico, que sai quando expiramos, e água."
+      "Nas células, a glicose vira ATP, a moeda de energia que paga o trabalho dos músculos, dos neurônios e de quase tudo. Esse processo é a respiração celular.",
+      "Primeiro vem a glicólise, no citoplasma: a glicose é quebrada ao meio. Depois os pedaços entram na mitocôndria, a usina da célula, e passam pelo ciclo de Krebs.",
+      "Por fim, na cadeia respiratória, a mitocôndria usa o oxigênio para fazer a maior parte do ATP. Sobram gás carbônico (sai ao expirar) e água."
     ],
     refs: [["Resumo", "glicose + oxigênio → gás carbônico + água + energia"], ["ATP por glicose", "cerca de 30"], ["Onde se forma mais ATP", "mitocôndria"], ["Gasto do cérebro", "≈ 20% da energia do corpo"]],
-    clinical: "As células do cérebro dependem quase só de glicose. Com a glicose em 48 mg/dL, o cérebro do Pedro produziu pouco ATP e ele desmaiou. Quando a glicose volta ao sangue, a produção de ATP se recupera em poucos minutos.",
+    clinical: "O cérebro depende quase só de glicose. Com 48 mg/dL, produziu pouco ATP e o Pedro desmaiou. Quando a glicose volta ao sangue, o ATP se recupera em poucos minutos.",
     hint: "Comece pelo combustível e termine na moeda de energia. A primeira quebra da glicose acontece fora da mitocôndria.",
     summary: "Na respiração celular, a glicose passa por glicólise, ciclo de Krebs e cadeia respiratória e vira ATP, a energia da célula."
   }
@@ -1749,13 +1802,13 @@ function beginGame() {
   const body = el("div", "panel-body");
   const c = el("div", "concept");
   c.append(el("h3", null, "O que aconteceu"),
-    el("p", null, "O Pedro não tomou café da manhã e está há 12 horas sem comer. Na aula de Educação Física, ficou pálido, começou a tremer, suou frio e desmaiou por alguns instantes. Ele está em jejum e num estado de estresse pós-exercício. Agora está deitado na maca, sonolento e confuso."),
-    el("p", null, `${S.name}, você é a enfermeira de plantão. Ele está deitado no leito da enfermaria. Pela sala há ${N} estações. Em cada uma, leia o quadro e resolva o desafio para liberar a próxima. A estação certa tem uma seta amarela em cima.`));
+    el("p", null, "O Pedro está há 12 horas sem comer. Na Educação Física, ficou pálido, tremeu, suou frio e desmaiou. Ele está em jejum e em estresse pós-exercício, sonolento e confuso."),
+    el("p", null, `${S.name}, você é a enfermeira de plantão. Pela sala há ${N} estações: em cada uma, leia o quadro e resolva o desafio. A estação da vez tem uma seta amarela.`));
   body.append(c);
   const board = el("div", "board");
   const r = el("div", "refs"); r.append(el("h3", null, "Regras"));
   const tb = el("table"); [["Tempo total", "20 min"], ["Lendo o quadro", "tempo parado"], ["Cada dica", "−1 min"], ["1º e 2º erro na estação", "−100 pts cada"], ["Do 3º erro em diante", "−400 pts cada"]].forEach(row => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", null, row[1])); tb.append(tr); }); r.append(tb);
-  const cl = el("div", "clinical"); cl.append(el("h3", null, "Pontos"), el("p", null, "Até 1000 pontos por estação, bônus quando você acerta várias estações seguidas sem errar e 2 pontos por segundo que sobrar no final."));
+  const cl = el("div", "clinical"); cl.append(el("h3", null, "Pontos"), el("p", null, "Até 1000 pts por estação, bônus por estações seguidas sem erro e 2 pts por segundo que sobrar."));
   board.append(r, cl); body.append(board);
   const foot = el("div", "panel-foot"); foot.append(el("span", "spacer"));
   const go = el("button", "btn", "Começar plantão"); go.type = "button";
