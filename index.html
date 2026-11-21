@@ -476,6 +476,11 @@ function face(hd, b, o) {
 }
 /* Enfermeira: pink uniform, cap with white cross, dark bob, blue stethoscope */
 function buildNurse() {
+  const n = buildNurseBody();
+  n.rig.head.scale.setScalar(0.8); // nurse head 20% smaller, scaled from the neck
+  return n;
+}
+function buildNurseBody() {
   return chunky((r, b) => {
     const SK = "#f6c9a8", SKs = "#e9b08c", P = "#f59ab0", Pd = "#e57f9a", Pl = "#ffc3d1", W = "#ffffff", H = "#3b2a26", Hl = "#4e3933";
     [r.legR, r.legL].forEach(L => { b(3.4, 3.4, 3.8, SK, 0, -1.7, 0, L); b(4.4, 1.8, 5.6, W, 0, -4.1, 0.4, L); b(4.5, 0.5, 5.7, "#d8d2d6", 0, -4.95, 0.4, L); });
