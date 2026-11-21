@@ -202,6 +202,14 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 .rank-actions{justify-content:center;margin-top:18px}
 .teacher{text-align:center;margin-top:12px}
 .linkish{appearance:none;background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font-weight:600;font-size:13px;opacity:.8}
+#cut{position:fixed;inset:0;z-index:40;pointer-events:none}
+#cut .bar{position:absolute;left:0;right:0;height:9vh;background:#0d0f14}
+#cut .top{top:0}#cut .bot{bottom:0}
+#cutCap{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(9vh + 14px);margin:0;width:max-content;max-width:min(720px,calc(100% - 32px));box-sizing:border-box;background:rgba(13,15,20,.8);color:#fff;font-weight:600;font-size:clamp(15px,2.4vw,19px);line-height:1.4;padding:10px 16px;border-radius:8px;text-align:center;opacity:0}
+#cutCap.in{opacity:1;animation:capIn .5s}
+@keyframes capIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+#skipCut{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:calc(9vh + 12px);pointer-events:auto}
+#fade{position:fixed;inset:0;background:#0d0f14;opacity:0;pointer-events:none;z-index:39}
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
 <meta name="theme-color" content="#14213d">
@@ -231,12 +239,14 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 <div id="modal" hidden></div>
 <div id="banner" hidden></div>
 <div id="toast" hidden></div>
+<div id="fade"></div>
+<div id="cut" hidden><div class="bar top"></div><div class="bar bot"></div><p id="cutCap" aria-live="polite"></p><button class="btn ghost" id="skipCut" type="button">Pular ▸</button></div>
 
 <div class="screen" id="startScreen">
   <div class="card stack">
     <div class="eyebrow">Escape room de bioquímica · caso clínico</div>
     <h1>O Desmaio do Pedro</h1>
-    <p>Pedro, 16 anos, desmaiou na aula de Educação Física e foi levado para a tenda de primeiros socorros no pátio da escola. Você é a enfermeira de plantão e tem <b>20 minutos</b> para passar pelas 4 estações, entender o que aconteceu e decidir como ajudar.</p>
+    <p>Pedro, 16 anos, desmaiou na aula de Educação Física e foi levado para a enfermaria da escola. Você é a enfermeira de plantão e tem <b>20 minutos</b> para passar pelas 4 estações, entender o que aconteceu e decidir como ajudar.</p>
     <div class="case-strip">
       <div><b>16 anos</b><span>idade</span></div>
       <div><b>12 h</b><span>sem comer</span></div>
@@ -400,8 +410,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouch ? 1.5 : 2)
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color("#9fd8f5");
-scene.fog = new THREE.Fog("#c4e8f7", 30, 70);
+scene.background = new THREE.Color("#fbe6d4");
+scene.fog = new THREE.Fog("#fbe6d4", 30, 70);
 const camera = new THREE.PerspectiveCamera(58, 1, 0.05, 160);
 scene.add(new THREE.HemisphereLight(0xfffdf2, 0x86c066, 0.92));
 const sun = new THREE.DirectionalLight(0xfff0d4, 0.72);
@@ -503,16 +513,28 @@ function buildStudent(opts = {}) {
   });
 }
 
-/* ---------- World: colorful schoolyard next to the sports court ---------- */
-const RH = 9;      // max camera height
-const WB = 14;     // walkable half-size
+/* ---------- World: colorful school infirmary (indoors) ---------- */
+const RH = 4.5;            // max camera height (walls are 5 tall)
+const WB = 11.2;           // walkable half-size in x and toward the front
+const WZ0 = -8.4;          // walkable limit toward the back wall
+const INDOOR_BG = "#fbe6d4";
 const obstacles = [];
 const FLOWER = ["#e8453c", "#f7c531", "#f27ea9", "#fbf6ee", "#f59a36", "#b67be0"];
-function tulip(x, z, c) {
-  box(0.06, 0.38, 0.06, "#4f9a3c", x, 0.19, z, null, false);
-  box(0.16, 0.05, 0.06, "#5fae46", x + 0.07, 0.12, z, null, false);
-  box(0.22, 0.24, 0.22, c, x, 0.48, z);
-  box(0.1, 0.06, 0.1, "#fff6b0", x, 0.61, z, null, false);
+const RAINBOW = ["#ef6f6c", "#f7b33e", "#f6e05e", "#6cc98a", "#5aa9e6", "#a98ae6"];
+function canvasPlane(w, h, draw, pw, ph, opts = {}) {
+  const cv = document.createElement("canvas"); cv.width = pw; cv.height = ph; draw(cv.getContext("2d"), pw, ph);
+  const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter;
+  const mat = opts.basic ? new THREE.MeshBasicMaterial({ map: t, transparent: !!opts.transparent }) : new THREE.MeshLambertMaterial({ map: t, transparent: !!opts.transparent });
+  if (opts.transparent) mat.side = THREE.DoubleSide;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  mesh.userData.canvas = cv; mesh.userData.tex = t; return mesh;
+}
+function place(m, x, y, z, ry = 0, parent) { m.position.set(x, y, z); m.rotation.y = ry; (parent || scene).add(m); return m; }
+function tulip(x, z, c, p) {
+  box(0.06, 0.38, 0.06, "#4f9a3c", x, 0.19, z, p, false);
+  box(0.16, 0.05, 0.06, "#5fae46", x + 0.07, 0.12, z, p, false);
+  box(0.22, 0.24, 0.22, c, x, 0.48, z, p);
+  box(0.1, 0.06, 0.1, "#fff6b0", x, 0.61, z, p, false);
 }
 function daisy(x, z, c) {
   box(0.05, 0.26, 0.05, "#4f9a3c", x, 0.13, z, null, false);
@@ -536,7 +558,6 @@ function tree(x, z, s = 1, fruit = true, seed = 1) {
     if (fruit && d > R - 1.3 && b > -2 && hash(a, b + seed, c) > 0.94) return "#e53935";
     const h = hash(c, a, b + seed); return h > .6 ? "#4fae4a" : h > .25 ? "#43a047" : "#5cbc52";
   }, 0, 3.6 * s, 0);
-  obstacles.push({ x, z, r: 0.7 * s });
 }
 function bush(x, z, s = 1, seed = 3) {
   const g = group(null, x, 0, z);
@@ -545,105 +566,209 @@ function bush(x, z, s = 1, seed = 3) {
     if (b >= 2 && hash(a, b + seed, c) > 0.9) return FLOWER[Math.floor(hash(seed, a, c) * 3)];
     return hash(a + seed, b, c) > .5 ? "#3f9a45" : "#4caf50";
   }, 0, 0.11 * s, 0);
-  obstacles.push({ x, z, r: 0.8 * s });
 }
-function fence(x0, z0, x1, z1) {
-  const n = Math.round(Math.hypot(x1 - x0, z1 - z0) / 1.5);
-  for (let i = 0; i <= n; i++) box(0.22, 1.0, 0.22, "#c99a63", x0 + (x1 - x0) * i / n, 0.5, z0 + (z1 - z0) * i / n);
-  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, L = Math.hypot(x1 - x0, z1 - z0), horiz = Math.abs(x1 - x0) > Math.abs(z1 - z0);
-  [0.45, 0.8].forEach(y => box(horiz ? L : 0.1, 0.12, horiz ? 0.1 : L, "#dcb07a", cx, y, cz));
+/* potted plant with a chunky leaf ball */
+function plant(x, z, s = 1, seed = 1, parent) {
+  const g = group(parent, x, 0, z);
+  box(0.7 * s, 0.6 * s, 0.7 * s, "#e0784e", 0, 0.3 * s, 0, g); box(0.8 * s, 0.12 * s, 0.8 * s, "#f08f62", 0, 0.62 * s, 0, g);
+  box(0.6 * s, 0.05 * s, 0.6 * s, "#6b4a32", 0, 0.66 * s, 0, g, false);
+  voxels(g, 0.16 * s, [-4, 4, 0, 7, -4, 4], (a, b, c) => {
+    const d = a * a / 16 + (b - 3.5) * (b - 3.5) / 14 + c * c / 16;
+    if (d > 1 - hash(a + seed, b, c) * 0.25) return null;
+    if (b > 4 && hash(a, b, c + seed) > 0.93) return "#ffd45c";
+    return hash(c, a + seed, b) > .5 ? "#4fae4a" : "#5cbc52";
+  }, 0, 0.72 * s, 0);
+  if (!parent) obstacles.push({ x, z, r: 0.5 * s });
+  return g;
 }
-(function buildWorld() {
-  const S = 16;
-  // grass, sandy paths and soil
-  voxels(scene, 1, [-S, S - 1, 0, 0, -S, S - 1], (x, y, z) => {
-    const cx = x + 0.5, cz = z + 0.5, d = Math.hypot(cx, cz);
-    if (cz < -12) return null;
-    if (cx > 5 && cx < 13 && cz > 6.5 && cz < 13.5) return null;
-    if ((d > 5.6 && d < 7.0) || (Math.abs(cx) < 1.2 && cz > 3)) return hash(x, 2, z) > .5 ? "#efdcab" : "#e8d29c";
-    const h = hash(x, 1, z); return h < .33 ? "#7cc65a" : h < .66 ? "#86cf62" : "#77bf55";
-  }, 0.5, -0.5, 0.5);
-  box(32, 1, 32, "#9b6b43", 0, -1.5, 0, null, false);
-  // little grass tufts
-  voxels(scene, 0.12, [-120, 120, 0, 0, -100, 120], (x, y, z) => {
-    if (hash(x, 7, z) < 0.985) return null;
-    const wx = x * 0.12, wz = z * 0.12, d = Math.hypot(wx, wz);
-    if ((d > 5.4 && d < 7.2) || (Math.abs(wx) < 1.4 && wz > 2.8) || (wx > 4.8 && wx < 13.2 && wz > 6.3 && wz < 13.7) || d < 3.2) return null;
-    return hash(z, 3, x) > .5 ? "#5aa83f" : "#68b84a";
-  }, 0, 0.06, 0);
-  // sports court where Pedro fainted
-  box(8, 0.06, 7, "#3f8fd0", 9, 0.03, 10, null, false); box(7.2, 0.07, 6.2, "#5aa9e6", 9, 0.035, 10, null, false);
-  [[7.2, 0.08, 0.1, 9, 6.9], [7.2, 0.08, 0.1, 9, 13.1], [0.1, 0.08, 6.2, 5.4, 10], [0.1, 0.08, 6.2, 12.6, 10], [0.1, 0.08, 6.2, 9, 10]].forEach(l => box(l[0], l[1], l[2], "#ffffff", l[3], 0.04, l[4], null, false));
-  box(0.2, 3.2, 0.2, "#c7ced9", 9, 1.6, 13.6); box(1.6, 1.0, 0.1, "#ffffff", 9, 3.2, 13.45); box(0.6, 0.06, 0.06, "#f05a28", 9, 2.9, 13.05);
-  obstacles.push({ x: 9, z: 13.6, r: 0.4 });
-  box(0.3, 0.12, 0.12, "#4fc3f7", 7.6, 0.08, 9.2); box(0.12, 0.24, 0.12, "#e3f2fd", 7.6, 0.2, 9.2); // dropped water bottle
-  // river with orange banks, and the school across it
-  box(32, 0.4, 4.6, "#5fc6e8", 0, -0.35, -14.3, null, false);
-  box(32, 0.9, 0.5, "#e0955c", 0, -0.3, -12.1); box(32, 0.15, 0.55, "#7cc65a", 0, 0.08, -11.95, null, false);
-  box(32, 1, 6, "#7cc65a", 0, -0.5, -19.5, null, false); box(32, 0.9, 0.5, "#e0955c", 0, -0.3, -16.6);
-  for (let i = 0; i < 26; i++) { const sp = box(0.3 + hash(i, 1, 1) * 0.5, 0.03, 0.06, "#e6f8ff", -15 + hash(i, 2, 3) * 30, -0.13, -15.6 + hash(i, 4, 5) * 2.6, null, false); sp.userData.ph = i; ambient.push(t => { sp.position.x += Math.sin(t * 0.7 + sp.userData.ph) * 0.004; }); }
-  const sch = group(null, 0, 0, -21);
-  box(24, 6, 4, "#f6e3c4", 0, 3, 0, sch); box(25, 0.8, 5, "#c9614a", 0, 6.3, 0, sch); box(25.5, 0.4, 5.4, "#b5523c", 0, 5.9, 0, sch);
-  for (let i = -5; i <= 5; i++) { if (i === 0) continue; [1.8, 4.2].forEach(y => { box(1.3, 1.3, 0.1, "#9fd3f0", i * 2, y, 2.02, sch, false); box(1.5, 0.15, 0.2, "#ffffff", i * 2, y - 0.75, 2.05, sch, false); }); }
-  box(2.2, 3, 0.2, "#8a5a3c", 0, 1.5, 2.05, sch); box(4, 0.8, 0.3, "#2f6fd0", 0, 4.4, 2.1, sch);
-  box(0.12, 7, 0.12, "#d0d4da", 10, 3.5, 3, sch); box(1.4, 0.9, 0.05, "#23946b", 10.7, 6.4, 3, sch);
-  // fences on the sides and the front
-  fence(-15, -11.6, -15, 15); fence(15, -11.6, 15, 15); fence(-15, 15, 15, 15);
-  // trees with apples, bushes, flower beds
-  [[-13, -10, 1.1, 1], [-13.2, -2.5, 1, 2], [-13, 4.5, 1.15, 3], [-12.5, 11.5, 1, 4], [-6.5, 13.5, 0.95, 5], [13, -10, 1.1, 6], [13.2, -3, 1, 7], [13.2, 3, 0.9, 8], [-9, -10.5, 0.9, 9], [9, -10.6, 0.95, 10], [3.5, 13.8, 0.85, 11]].forEach((t, k) => tree(t[0], t[1], t[2], k % 3 !== 2, t[3]));
-  [[-11, 7.5, 1], [-11.5, 0.5, 1.1], [11.5, 0, 1], [-4.5, -10.8, 0.9], [4.5, -10.8, 0.9], [-12.6, -6.5, 1], [12.6, -6.5, 1]].forEach((b, k) => bush(b[0], b[1], b[2], k + 3));
-  flowerBed(-2.6, 8.6, 2.0, 1.2, 1); flowerBed(2.6, 8.6, 2.0, 1.2, 2); flowerBed(-3.6, -2.9, 1.6, 1.0, 3); flowerBed(3.6, -2.9, 1.6, 1.0, 4); flowerBed(-9.4, 9.4, 2.2, 1.2, 5); flowerBed(0, -9.6, 3.0, 1.0, 6);
-  [[-2.6, 8.6, 1.2], [2.6, 8.6, 1.2], [-9.4, 9.4, 1.3], [0, -9.6, 1.6]].forEach(o => obstacles.push({ x: o[0], z: o[1], r: o[2] }));
-  // drinking fountain and benches
-  const fo = group(null, -1.9, 0, 4.6); box(0.6, 1.0, 0.6, "#c7ced9", 0, 0.5, 0, fo); box(0.8, 0.12, 0.8, "#e9ecef", 0, 1.06, 0, fo); box(0.36, 0.05, 0.36, "#5fc6e8", 0, 1.13, 0, fo);
-  obstacles.push({ x: -1.9, z: 4.6, r: 0.5 });
-  [[-6.5, 9.6], [6.2, 5.2]].forEach(p => { const g = group(null, p[0], 0, p[1]); box(2, 0.12, 0.6, "#d9a066", 0, 0.5, 0, g); box(2, 0.5, 0.1, "#d9a066", 0, 0.85, -0.28, g); [-0.85, 0.85].forEach(x => box(0.12, 0.5, 0.5, "#7d8796", x, 0.25, 0, g)); obstacles.push({ x: p[0], z: p[1], r: 1.0 }); });
-  // clouds
-  for (let k = 0; k < 9; k++) {
-    const g = group(null, -40 + k * 10, 14 + (k % 3) * 2, -30 + (k % 4) * 6);
-    box(4, 1.3, 2.4, "#ffffff", 0, 0, 0, g, false); box(2.6, 1.1, 2, "#ffffff", 1, 1, 0, g, false); box(2, 0.9, 1.8, "#ffffff", -1.8, 0.5, 0.2, g, false);
-    ambient.push((t, dt) => { g.position.x += dt * 0.5; if (g.position.x > 50) g.position.x = -50; });
+/* a wall segment, axis-aligned, with baseboard, teal wainscot, white chair rail, peach upper part and pink top trim */
+function wallSeg(x0, z0, x1, z1, y0 = 0, y1 = 5) {
+  const horiz = Math.abs(x1 - x0) > Math.abs(z1 - z0), L = horiz ? Math.abs(x1 - x0) : Math.abs(z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, T = 0.3;
+  const layer = (a, b, c, inset = 0) => {
+    const lo = Math.max(a, y0), hi = Math.min(b, y1); if (hi <= lo) return;
+    box(horiz ? L : T + inset, hi - lo, horiz ? T + inset : L, c, cx, (lo + hi) / 2, cz, null, false);
+  };
+  layer(0, 0.22, "#e88a6a", 0.08); layer(0.22, 1.55, "#7cc7bf"); layer(1.55, 1.72, "#ffffff", 0.08); layer(1.72, 4.8, "#ffe1c2"); layer(4.8, 5, "#f39bb0", 0.08);
+}
+function drawSky(x, w, h) {
+  const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#6fc3f5"); g.addColorStop(1, "#cdeeff"); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.fillStyle = "#ffffff"; [[0.2, 0.22, 0.28], [0.68, 0.14, 0.22], [0.5, 0.4, 0.16]].forEach(c => { x.fillRect(c[0] * w, c[1] * h, c[2] * w, 0.09 * h); x.fillRect((c[0] + 0.04) * w, (c[1] - 0.06) * h, c[2] * 0.55 * w, 0.08 * h); });
+  x.fillStyle = "#5cbc52"; for (let i = 0; i < 8; i++) { const r = (0.1 + hash(i, 2, 9) * 0.08) * w; x.fillRect(i * w / 7 - r / 2, h * 0.78 - r * 0.5, r, r); }
+  x.fillStyle = "#86cf62"; x.fillRect(0, h * 0.86, w, h * 0.14);
+}
+/* window with sky view, white frame, cross bars, curtains and a sill; built facing +z in its own group */
+function windowAt(x, y, z, ry, w = 2.4, h = 1.9) {
+  const g = group(null, x, y, z); g.rotation.y = ry;
+  const pane = canvasPlane(w, h, drawSky, 256, 200, { basic: true }); pane.position.z = 0.17; g.add(pane);
+  box(w + 0.2, 0.14, 0.12, "#ffffff", 0, h / 2, 0.2, g, false); box(w + 0.2, 0.14, 0.12, "#ffffff", 0, -h / 2, 0.2, g, false);
+  box(0.14, h, 0.12, "#ffffff", -w / 2, 0, 0.2, g, false); box(0.14, h, 0.12, "#ffffff", w / 2, 0, 0.2, g, false);
+  box(0.08, h, 0.08, "#ffffff", 0, 0, 0.2, g, false); box(w, 0.08, 0.08, "#ffffff", 0, 0, 0.2, g, false);
+  box(w + 0.5, 0.1, 0.4, "#ffffff", 0, -h / 2 - 0.08, 0.32, g, false);
+  [-1, 1].forEach(sd => {
+    for (let k = 0; k < 3; k++) box(0.22, h + 0.3, 0.06, k % 2 ? "#ffe08a" : "#ffd45c", sd * (w / 2 + 0.1 + k * 0.2), 0.05, 0.3 + (k % 2) * 0.03, g, false);
+    box(0.7, 0.1, 0.1, "#f27ea9", sd * (w / 2 + 0.3), -0.25, 0.36, g, false);
+  });
+  box(w + 1.4, 0.08, 0.08, "#c98d57", 0, h / 2 + 0.28, 0.32, g, false);
+  return g;
+}
+/* triangular bunting along a wall */
+function garland(x, y, z, ry, w) {
+  const m = canvasPlane(w, 0.55, (c, pw, ph) => {
+    c.clearRect(0, 0, pw, ph); c.strokeStyle = "#ffffff"; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(0, 8); for (let i = 0; i <= pw; i += 8) c.lineTo(i, 8 + Math.sin(i / pw * Math.PI) * 18); c.stroke();
+    const n = Math.round(w * 2.2), step = pw / n;
+    for (let i = 0; i < n; i++) { const cx = (i + 0.5) * step, cy = 8 + Math.sin(cx / pw * Math.PI) * 18; c.fillStyle = RAINBOW[i % RAINBOW.length]; c.beginPath(); c.moveTo(cx - step * 0.4, cy); c.lineTo(cx + step * 0.4, cy); c.lineTo(cx, cy + ph * 0.7); c.closePath(); c.fill(); }
+  }, Math.round(w * 64), 36, { transparent: true });
+  return place(m, x, y, z, ry);
+}
+/* posters drawn on canvas */
+function posterDraw(title, sub, bg, icon) {
+  return (x, w, h) => {
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, w, h); x.fillStyle = bg; x.fillRect(10, 10, w - 20, h - 20);
+    x.fillStyle = "#ffffff"; x.textAlign = "center"; x.font = "bold 34px Inter, sans-serif"; x.fillText(title, w / 2, 58);
+    x.font = "600 20px Inter, sans-serif"; x.fillText(sub, w / 2, h - 30);
+    const cx = w / 2, cy = h / 2 + 8; x.save(); x.translate(cx, cy);
+    if (icon === "drop") { x.fillStyle = "#e6f7ff"; x.beginPath(); x.moveTo(0, -62); x.quadraticCurveTo(52, 10, 0, 50); x.quadraticCurveTo(-52, 10, 0, -62); x.fill(); x.fillStyle = "#5aa9e6"; x.fillRect(-14, 0, 12, 12); }
+    if (icon === "hands") { x.fillStyle = "#ffe1c2"; x.fillRect(-58, -40, 50, 80); x.fillRect(8, -40, 50, 80); x.fillStyle = "#ffffff"; [[-70, -50], [62, -30], [-30, 52], [40, 50], [0, -60]].forEach(p => { x.beginPath(); x.arc(p[0], p[1], 12, 0, 7); x.fill(); }); }
+    if (icon === "apple") { x.fillStyle = "#e53935"; x.fillRect(-48, -36, 96, 84); x.fillRect(-38, -46, 76, 104); x.fillStyle = "#4fae4a"; x.fillRect(4, -72, 30, 18); x.fillStyle = "#7a4d31"; x.fillRect(-4, -66, 8, 22); }
+    if (icon === "heart") { x.fillStyle = "#ff5a7a"; x.beginPath(); x.arc(-26, -18, 32, 0, 7); x.arc(26, -18, 32, 0, 7); x.fill(); x.beginPath(); x.moveTo(-57, -8); x.lineTo(57, -8); x.lineTo(0, 56); x.fill(); x.strokeStyle = "#ffffff"; x.lineWidth = 6; x.beginPath(); x.moveTo(-50, -4); x.lineTo(-20, -4); x.lineTo(-8, -26); x.lineTo(6, 18); x.lineTo(18, -4); x.lineTo(50, -4); x.stroke(); }
+    if (icon === "sleep") { x.fillStyle = "#ffe08a"; x.beginPath(); x.arc(0, 0, 50, 0, 7); x.fill(); x.fillStyle = bg; x.beginPath(); x.arc(22, -16, 44, 0, 7); x.fill(); x.fillStyle = "#ffffff"; x.font = "bold 30px Inter"; x.fillText("z z", 44, -40); }
+    x.restore();
+  };
+}
+function poster(x, y, z, ry, title, sub, bg, icon) {
+  const p = canvasPlane(1.4, 1.8, posterDraw(title, sub, bg, icon), 280, 360); place(p, x, y, z, ry);
+  return p;
+}
+const clockFace = canvasPlane(0.8, 0.8, () => {}, 160, 160, { basic: true, transparent: true });
+function drawClock() {
+  const cv = clockFace.userData.canvas, x = cv.getContext("2d"), r = 74, d = new Date();
+  x.clearRect(0, 0, 160, 160); x.save(); x.translate(80, 80);
+  x.fillStyle = "#f39bb0"; x.beginPath(); x.arc(0, 0, r + 4, 0, 7); x.fill(); x.fillStyle = "#ffffff"; x.beginPath(); x.arc(0, 0, r - 6, 0, 7); x.fill();
+  x.fillStyle = "#1b2333"; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; x.fillRect(Math.sin(a) * 56 - 3, -Math.cos(a) * 56 - 3, 6, 6); }
+  const hand = (a, L, wd, c) => { x.strokeStyle = c; x.lineWidth = wd; x.lineCap = "round"; x.beginPath(); x.moveTo(0, 0); x.lineTo(Math.sin(a) * L, -Math.cos(a) * L); x.stroke(); };
+  const s = d.getSeconds(), m = d.getMinutes() + s / 60, h = d.getHours() % 12 + m / 60;
+  hand(h / 12 * Math.PI * 2, 32, 7, "#1b2333"); hand(m / 60 * Math.PI * 2, 48, 5, "#1b2333"); hand(s / 60 * Math.PI * 2, 54, 2, "#e53935");
+  x.restore(); clockFace.userData.tex.needsUpdate = true;
+}
+(function buildInfirmary() {
+  const X = 12, ZB = -9.2, ZF = 12;
+  // checkered floor (mint and cream) and the hallway behind the door
+  voxels(scene, 1, [-X, X - 1, 0, 0, -10, ZF - 1], (x, y, z) => ((x + z) & 1) ? "#ffe7b5" : "#a6dcc6", 0.5, -0.5, 0.5);
+  box(3.4, 0.1, 1.9, "#d9e7f2", 13.7, -0.05, -4, null, false);
+  box(0.3, 5, 2.4, "#cfe2f3", 15.3, 2.5, -4, null, false); box(3.4, 5, 0.3, "#cfe2f3", 13.7, 2.5, -5.1, null, false); box(3.4, 5, 0.3, "#cfe2f3", 13.7, 2.5, -2.9, null, false);
+  // walls (right wall has the door gap at z -4.8..-3.2)
+  wallSeg(-X - 0.15, ZB, X + 0.15, ZB); wallSeg(-X - 0.15, ZF, X + 0.15, ZF); wallSeg(-X, ZB, -X, ZF);
+  wallSeg(X, ZB, X, -4.8); wallSeg(X, -3.2, X, ZF); wallSeg(X, -4.8, X, -3.2, 2.9, 5);
+  // door frame, open door leaf (into the hallway) and an exit sign
+  box(0.4, 2.95, 0.14, "#ffffff", X, 1.47, -4.85, null, false); box(0.4, 2.95, 0.14, "#ffffff", X, 1.47, -3.15, null, false); box(0.4, 0.14, 1.84, "#ffffff", X, 2.9, -4, null, false);
+  const leaf = group(null, X + 0.1, 0, -4.75); leaf.rotation.y = -1.25;
+  box(1.5, 2.75, 0.08, "#7ab8f5", 0.75, 1.38, 0, leaf, false); box(0.5, 0.6, 0.09, "#cdeeff", 0.75, 2.0, 0, leaf, false); box(0.1, 0.1, 0.16, "#f7c531", 1.35, 1.3, 0, leaf, false);
+  const exitSign = canvasPlane(1.1, 0.34, (c, w, h) => { c.fillStyle = "#23946b"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 46px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("SAÍDA  ➜", w / 2, h / 2 + 2); }, 330, 100, { basic: true });
+  place(exitSign, X - 0.17, 3.3, -4, -Math.PI / 2);
+  // windows, bunting, posters and the clock
+  [-7.5, 0, 7.5].forEach(x => windowAt(x, 2.95, ZB, 0));
+  windowAt(-X, 2.95, -1.0, Math.PI / 2, 2.2, 1.8);
+  garland(0, 4.35, ZB + 0.17, 0, 23); garland(-X + 0.17, 4.35, 1.4, Math.PI / 2, 21); garland(X - 0.17, 4.35, 4.0, -Math.PI / 2, 15); garland(0, 4.35, ZF - 0.17, Math.PI, 23);
+  poster(-3.75, 3.0, ZB + 0.17, 0, "Beba água", "Hidrate-se no treino", "#5aa9e6", "drop");
+  poster(3.75, 3.0, ZB + 0.17, 0, "Lave as mãos", "Antes de comer", "#6cc98a", "hands");
+  poster(-X + 0.17, 3.0, 7.6, Math.PI / 2, "Café da manhã", "Comece o dia bem", "#ef6f6c", "apple");
+  poster(X - 0.17, 3.0, 4.8, -Math.PI / 2, "Coração", "Cuide dele", "#a98ae6", "heart");
+  poster(-2.2, 3.0, ZF - 0.17, Math.PI, "Durma bem", "8 horas por noite", "#f7b33e", "sleep");
+  place(clockFace, X - 0.17, 3.25, -1.2, -Math.PI / 2); drawClock();
+  { let acc = 0; ambient.push((t, dt) => { acc += dt; if (acc > 1) { acc = 0; drawClock(); } }); }
+  // left wall: medicine cabinet, sink with mirror, colorful lockers, height scale
+  const cab = group(null, -X + 0.45, 0, -6.4); cab.rotation.y = Math.PI / 2;
+  box(1.9, 2.3, 0.6, "#ffffff", 0, 1.15, 0, cab); box(1.7, 0.8, 0.04, "#9ad0f5", 0, 0.5, 0.31, cab, false); box(0.04, 0.8, 0.05, "#ffffff", 0, 0.5, 0.33, cab, false);
+  [1.2, 1.7].forEach((sy, si) => { box(1.7, 0.05, 0.5, "#e0e6ee", 0, sy, 0.04, cab, false); for (let k = 0; k < 6; k++) { const hh = 0.2 + hash(k, si, 3) * 0.14; box(0.16, hh, 0.16, RAINBOW[(k + si * 2) % 6], -0.7 + k * 0.28, sy + 0.03 + hh / 2, 0.08, cab, false); box(0.1, 0.05, 0.1, "#ffffff", -0.7 + k * 0.28, sy + 0.06 + hh, 0.08, cab, false); } });
+  box(0.5, 0.16, 0.05, "#e53935", 0, 2.12, 0.32, cab, false); box(0.16, 0.5, 0.05, "#e53935", 0, 2.12, 0.32, cab, false);
+  obstacles.push({ box: [-X, -X + 0.85, -7.5, -5.3] });
+  const sink = group(null, -X + 0.5, 0, -3.0); sink.rotation.y = Math.PI / 2;
+  box(1.6, 0.9, 0.7, "#f7c873", 0, 0.45, 0, sink); box(1.7, 0.08, 0.8, "#ffffff", 0, 0.94, 0, sink); box(0.7, 0.04, 0.45, "#bfe3f5", 0, 0.99, 0.02, sink, false);
+  box(0.08, 0.32, 0.08, "#c7ced9", 0, 1.14, -0.26, sink); box(0.08, 0.06, 0.24, "#c7ced9", 0, 1.28, -0.16, sink, false);
+  box(1.1, 1.0, 0.05, "#f39bb0", 0, 2.0, -0.34, sink, false); box(0.95, 0.85, 0.06, "#d8f1ff", 0, 2.0, -0.33, sink, false);
+  box(0.24, 0.12, 0.16, "#f27ea9", 0.55, 1.04, 0.1, sink, false);
+  obstacles.push({ box: [-X, -X + 0.9, -3.85, -2.15] });
+  for (let k = 0; k < 5; k++) {
+    const z = 1.6 + k * 0.82, c = RAINBOW[k];
+    box(0.6, 2.2, 0.8, c, -X + 0.45, 1.1, z); box(0.04, 0.24, 0.08, "#ffffff", -X + 0.76, 1.15, z + 0.25, null, false);
+    for (let v = 0; v < 3; v++) box(0.04, 0.04, 0.5, "#ffffff", -X + 0.76, 1.85 - v * 0.1, z, null, false);
   }
-  // butterflies
-  for (let k = 0; k < 6; k++) {
-    const g = group(null, 0, 1.2, 0), c = ["#ffffff", "#f7c531", "#f27ea9"][k % 3];
-    const wl = box(0.18, 0.02, 0.16, c, -0.09, 0, 0, g, false), wr = box(0.18, 0.02, 0.16, c, 0.09, 0, 0, g, false);
-    const cx = [-3, 3, -9, 9, 0, -6][k], cz = [8, 8, 9, 3, -9, -3][k];
-    ambient.push(t => { const a = t * 0.6 + k * 1.7; g.position.set(cx + Math.sin(a) * 1.6, 0.9 + Math.sin(t * 2 + k) * 0.35, cz + Math.cos(a * 1.3) * 1.2); g.rotation.y = -a; const f = Math.sin(t * 18 + k) * 0.9; wl.rotation.z = f; wr.rotation.z = -f; });
-  }
+  obstacles.push({ box: [-X, -X + 0.8, 1.15, 5.7] });
+  const sc = group(null, -X + 0.7, 0, 9.0);
+  box(0.7, 0.12, 0.7, "#ffffff", 0, 0.06, 0, sc); box(0.1, 2.1, 0.1, "#c7ced9", -0.3, 1.05, 0, sc); box(0.4, 0.06, 0.1, "#c7ced9", -0.1, 2.0, 0, sc, false);
+  box(0.06, 0.4, 0.4, "#e53935", -0.22, 1.1, 0, sc, false); box(0.04, 0.3, 0.3, "#ffffff", -0.18, 1.1, 0, sc, false);
+  obstacles.push({ x: -X + 0.7, z: 9.0, r: 0.5 });
+  // right wall: wheelchair, water cooler, colored waiting chairs
+  const wc = group(null, X - 0.9, 0, -7.2); wc.rotation.y = -Math.PI / 2;
+  box(0.7, 0.1, 0.65, "#3d7ff0", 0, 0.55, 0, wc); box(0.7, 0.7, 0.1, "#3d7ff0", 0, 0.95, -0.32, wc);
+  [-0.42, 0.42].forEach(x => { box(0.08, 0.8, 0.8, "#3a3f47", x, 0.42, -0.05, wc); box(0.09, 0.6, 0.6, "#c7ced9", x, 0.42, -0.05, wc, false); box(0.06, 0.06, 0.5, "#c7ced9", x, 0.85, 0, wc, false); box(0.06, 0.25, 0.06, "#c7ced9", x, 1.2, -0.38, wc, false); });
+  box(0.14, 0.14, 0.14, "#3a3f47", -0.25, 0.07, 0.4, wc); box(0.14, 0.14, 0.14, "#3a3f47", 0.25, 0.07, 0.4, wc);
+  obstacles.push({ x: X - 0.9, z: -7.2, r: 0.6 });
+  const wcool = group(null, X - 0.55, 0, -1.2);
+  box(0.6, 1.1, 0.6, "#ffffff", 0, 0.55, 0, wcool); box(0.45, 0.6, 0.45, "#7fd3ff", 0, 1.42, 0, wcool); box(0.25, 0.1, 0.25, "#5aa9e6", 0, 1.76, 0, wcool, false);
+  box(0.08, 0.08, 0.1, "#e53935", -0.12, 0.85, -0.33, wcool, false); box(0.08, 0.08, 0.1, "#2f6fd0", 0.12, 0.85, -0.33, wcool, false);
+  obstacles.push({ x: X - 0.55, z: -1.2, r: 0.45 });
+  ["#ef6f6c", "#f6e05e", "#6cc98a", "#5aa9e6", "#a98ae6"].forEach((c, k) => {
+    const ch = group(null, X - 0.6, 0, 2.2 + k * 0.95); ch.rotation.y = -Math.PI / 2;
+    box(0.7, 0.1, 0.7, c, 0, 0.5, 0, ch); box(0.7, 0.7, 0.1, c, 0, 0.9, -0.3, ch);
+    [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]].forEach(p => box(0.06, 0.45, 0.06, "#7d8796", p[0], 0.23, p[1], ch, false));
+  });
+  obstacles.push({ box: [X - 1.0, X, 1.7, 6.9] });
+  // front wall: reception desk with computer, bookshelf, fish tank
+  const desk = group(null, -6, 0, ZF - 1.1); desk.rotation.y = Math.PI;
+  box(3.2, 1.0, 0.9, "#ff9e80", 0, 0.5, 0, desk); box(3.3, 0.08, 1.0, "#ffffff", 0, 1.04, 0, desk); box(3.2, 0.12, 0.04, "#ffffff", 0, 0.7, 0.47, desk, false);
+  box(0.75, 0.5, 0.06, "#2b2f36", -0.6, 1.45, -0.15, desk); box(0.66, 0.42, 0.02, "#7fd3ff", -0.6, 1.45, -0.11, desk, false); box(0.1, 0.2, 0.1, "#7d8796", -0.6, 1.15, -0.15, desk, false);
+  box(0.6, 0.04, 0.2, "#e9ecef", -0.6, 1.1, 0.15, desk, false); box(0.16, 0.18, 0.16, "#ffd45c", 0.6, 1.17, 0.1, desk, false);
+  box(0.3, 0.06, 0.4, "#f27ea9", 1.1, 1.1, 0.0, desk, false); plant(1.25, -0.1, 0.45, 7, desk).position.y = 1.08;
+  obstacles.push({ box: [-7.7, -4.3, ZF - 1.7, ZF] });
+  const shelf = group(null, 2.6, 0, ZF - 0.45); shelf.rotation.y = Math.PI;
+  box(2.6, 2.4, 0.55, "#c98d57", 0, 1.2, 0, shelf); box(2.4, 2.2, 0.5, "#a8724a", 0, 1.2, 0.04, shelf, false);
+  [0.15, 0.95, 1.75].forEach((sy, si) => { box(2.4, 0.06, 0.5, "#e3b679", 0, sy, 0.06, shelf, false); let bx = -1.1; while (bx < 1.1) { const bw = 0.12 + hash(Math.round(bx * 10), si, 5) * 0.1, bh = 0.45 + hash(si, Math.round(bx * 10), 2) * 0.25; box(bw, bh, 0.36, RAINBOW[Math.floor(hash(Math.round(bx * 10), si, 1) * 6)], bx + bw / 2, sy + 0.03 + bh / 2, 0.1, shelf, false); bx += bw + 0.03; } });
+  obstacles.push({ box: [1.2, 4.0, ZF - 0.8, ZF] });
+  const tank = group(null, 7.6, 0, ZF - 0.5);
+  box(2.0, 0.9, 0.7, "#5aa9e6", 0, 0.45, 0, tank); box(1.9, 0.1, 0.6, "#f6e3c4", 0, 0.95, 0, tank, false);
+  const glass = new THREE.Mesh(UNIT, new THREE.MeshLambertMaterial({ color: "#a6e4ff", transparent: true, opacity: 0.38 })); glass.scale.set(1.9, 0.9, 0.6); glass.position.set(0, 1.4, 0); glass.renderOrder = 2; tank.add(glass);
+  box(1.95, 0.06, 0.65, "#2b2f36", 0, 1.88, 0, tank, false);
+  [[-0.6, 0.2], [0.5, 0.1], [0.75, -0.1]].forEach((p, k) => { box(0.08, 0.35 + k * 0.1, 0.08, "#43a047", p[0], 1.17 + k * 0.05, p[1], tank, false); });
+  [["#f59a36", 0], ["#f6e05e", 1.7], ["#ef6f6c", 3.4]].forEach(([c, ph], k) => {
+    const f = group(tank, 0, 1.3 + k * 0.14, 0); box(0.2, 0.12, 0.07, c, 0, 0, 0, f, false); box(0.07, 0.12, 0.05, c, -0.13, 0, 0, f, false);
+    ambient.push(t => { const a = t * 0.5 + ph; f.position.x = Math.sin(a) * 0.7; f.position.z = Math.cos(a * 1.7) * 0.15; f.rotation.y = Math.cos(a) > 0 ? 0 : Math.PI; });
+  });
+  obstacles.push({ box: [6.5, 8.7, ZF - 0.9, ZF] });
+  // big plants in the corners and on the back sill area
+  plant(-X + 0.8, ZB + 0.8, 1.1, 1); plant(X - 0.8, ZF - 0.8, 1.1, 2); plant(-X + 0.8, ZF - 0.8, 1.1, 3); plant(-10.2, ZB + 0.7, 0.8, 4); plant(10.0, ZB + 0.7, 0.9, 5);
+  // rug under the bed
+  voxels(scene, 0.25, [-11, 11, 0, 0, -11, 11], (a, b, c) => {
+    const d = Math.hypot(a / 11, c / 11); if (d > 1) return null;
+    if (d > 0.86) return "#f06292"; if (d > 0.78) return "#ffffff";
+    return ((a + c) % 4 === 0 && (a - c) % 4 === 0) ? "#fff3f7" : "#ffb3c7";
+  }, 0, 0.005, 0.3);
 })();
-function canvasPlane(w, h, draw, pw, ph) {
-  const cv = document.createElement("canvas"); cv.width = pw; cv.height = ph; draw(cv.getContext("2d"), pw, ph);
-  const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshLambertMaterial({ map: t }));
-  mesh.userData.canvas = cv; mesh.userData.tex = t; return mesh;
-}
 
-/* Medical tent over the bed */
-const tent = group(null, 0, 0, 0);
-box(4.6, 0.16, 5.0, "#d9a66b", 0, 0.08, 0, tent); for (let i = -2; i <= 2; i++) box(4.6, 0.02, 0.04, "#c08a52", 0, 0.17, i, tent, false);
-[[-2.1, -2.3], [2.1, -2.3], [-2.1, 2.3], [2.1, 2.3]].forEach(p => box(0.14, 3.0, 0.14, "#f4f6f8", p[0], 1.5, p[1], tent));
-box(4.8, 0.18, 5.2, "#ffffff", 0, 3.05, 0, tent);
-box(3.4, 0.5, 4.0, "#ffffff", 0, 3.35, 0, tent); box(2.0, 0.4, 3.0, "#ffffff", 0, 3.75, 0, tent);
-for (let i = 0; i < 12; i++) { const x = -2.2 + i * 0.4; box(0.4, 0.32, 0.06, i % 2 ? "#ffffff" : "#e53935", x, 2.82, 2.62, tent); box(0.4, 0.32, 0.06, i % 2 ? "#ffffff" : "#e53935", x, 2.82, -2.62, tent); }
-box(0.5, 0.06, 1.6, "#e53935", 0, 3.97, 0, tent, false); box(1.6, 0.06, 0.5, "#e53935", 0, 3.97, 0, tent, false);
-[[-2.1, -2.3], [2.1, -2.3], [-2.1, 2.3], [2.1, 2.3]].forEach(p => obstacles.push({ x: p[0], z: p[1], r: 0.2 }));
-
+/* Bed area: hospital bed on wheels, folding screen, bedside table, heart monitor */
 const bed = group(null, 0, 0, 0);
-[[-0.75, -1.45], [0.75, -1.45], [-0.75, 1.45], [0.75, 1.45]].forEach(p => box(0.08, 0.5, 0.08, "#9aa5b8", p[0], 0.4, p[1], bed));
+[[-0.75, -1.45], [0.75, -1.45], [-0.75, 1.45], [0.75, 1.45]].forEach(p => { box(0.08, 0.5, 0.08, "#9aa5b8", p[0], 0.4, p[1], bed); box(0.16, 0.15, 0.16, "#3a3f47", p[0], 0.075, p[1], bed); });
 box(1.65, 0.12, 3.1, "#aeb7c3", 0, 0.62, 0, bed); box(1.55, 0.2, 2.95, "#f7f9fb", 0, 0.78, 0, bed);
 box(1.0, 0.16, 0.55, "#ffffff", 0, 0.96, -1.1, bed);
-box(1.7, 1.0, 0.08, "#c7ced9", 0, 1.05, -1.56, bed); box(1.7, 0.6, 0.08, "#c7ced9", 0, 0.85, 1.56, bed);
+box(1.7, 1.0, 0.08, "#8fd3c9", 0, 1.05, -1.56, bed); box(1.7, 0.6, 0.08, "#8fd3c9", 0, 0.85, 1.56, bed);
 obstacles.push({ box: [-1.0, 1.0, -1.75, 1.75] });
-const blanket = box(1.6, 0.07, 1.45, "#8fb3df", 0, 1.42, 0.8);
-const monitorG = group(null, 1.45, 0.16, -1.25);
+const blanket = box(1.6, 0.07, 1.45, "#f7a8c0", 0, 1.42, 0.8);
+const screenG = group(null, 0, 0, -2.45);
+[["#c9a7f0", -0.95, 0.3], ["#a8e6cf", 0, 0], ["#ffb3c7", 0.95, -0.3]].forEach(([c, x, r]) => { const p = group(screenG, x, 0, 0); p.rotation.y = r; box(0.9, 1.9, 0.06, c, 0, 1.15, 0, p); box(0.96, 0.08, 0.1, "#ffffff", 0, 2.12, 0, p, false); [-0.45, 0.45].forEach(lx => box(0.06, 0.25, 0.06, "#ffffff", lx, 0.12, 0, p, false)); });
+obstacles.push({ box: [-1.5, 1.5, -2.7, -2.2] });
+const side = group(null, 1.45, 0, -1.3);
+box(0.6, 0.7, 0.6, "#ffd45c", 0, 0.35, 0, side); box(0.66, 0.06, 0.66, "#ffffff", 0, 0.73, 0, side); box(0.04, 0.04, 0.2, "#c98d57", 0, 0.5, 0.31, side, false);
+box(0.16, 0.24, 0.16, "#9ad0f5", -0.12, 0.88, 0, side, false); tulip(-0.12, 0, "#f27ea9", side); side.children.slice(-4).forEach(c => c.position.y += 0.62);
+box(0.1, 0.16, 0.1, "#e6f7ff", 0.16, 0.84, 0.1, side, false);
+obstacles.push({ x: 1.45, z: -1.3, r: 0.42 });
+const monitorG = group(null, -1.45, 0, -1.3);
 box(0.08, 1.5, 0.08, "#9aa5b8", 0, 0.75, 0, monitorG); box(0.5, 0.06, 0.5, "#7d8796", 0, 0.03, 0, monitorG);
 box(0.95, 0.65, 0.14, "#2b2f36", 0, 1.75, 0, monitorG);
-const monitorScreen = canvasPlane(0.85, 0.55, () => {}, 340, 220);
-monitorScreen.material = new THREE.MeshBasicMaterial({ map: monitorScreen.userData.tex });
+const monitorScreen = canvasPlane(0.85, 0.55, () => {}, 340, 220, { basic: true });
 monitorScreen.position.set(0, 1.75, 0.075); monitorG.add(monitorScreen);
-monitorG.rotation.y = -0.6;
-obstacles.push({ x: 1.45, z: -1.25, r: 0.35 });
+monitorG.rotation.y = 0.6;
+obstacles.push({ x: -1.45, z: -1.3, r: 0.35 });
 function drawMonitor(t, recovered) {
   const cv = monitorScreen.userData.canvas, x = cv.getContext("2d"), w = cv.width, h = cv.height;
   x.fillStyle = "#06090d"; x.fillRect(0, 0, w, h);
@@ -663,7 +788,38 @@ const pedroLying = buildStudent({ eyesClosed: true, noBackpack: true });
 scene.add(pedroLying.g);
 pedroLying.g.rotation.x = -Math.PI / 2; pedroLying.g.position.set(0, 1.12, 1.0);
 const pedroUp = buildStudent();
-scene.add(pedroUp.g); pedroUp.g.visible = false; pedroUp.g.position.set(-1.55, 0.16, 0.6); pedroUp.g.rotation.y = 0.6;
+scene.add(pedroUp.g); pedroUp.g.visible = false; pedroUp.g.position.set(-1.7, 0, 0.6); pedroUp.g.rotation.y = 0.6;
+
+/* ---------- Outdoor set for the opening cutscene: the sports court (far away from the infirmary) ---------- */
+const COURT_X = 140;
+(function buildCourtSet() {
+  const cx = COURT_X;
+  voxels(scene, 1, [-18, 17, 0, 0, -13, 14], (x, y, z) => { const h = hash(x, 1, z); return h < .33 ? "#7cc65a" : h < .66 ? "#86cf62" : "#77bf55"; }, cx + 0.5, -0.5, 0.5);
+  box(16, 0.06, 11, "#3f8fd0", cx, 0.03, 1.5, null, false); box(15.2, 0.07, 10.2, "#5aa9e6", cx, 0.035, 1.5, null, false);
+  [[15.2, 0.1, cx, -3.6], [15.2, 0.1, cx, 6.6]].forEach(l => box(l[0], 0.08, l[1], "#ffffff", l[2], 0.04, l[3], null, false));
+  [[0.1, 10.2, cx - 7.6], [0.1, 10.2, cx + 7.6], [0.1, 10.2, cx]].forEach(l => box(l[0], 0.08, l[1], "#ffffff", l[2], 0.04, 1.5, null, false));
+  box(0.2, 3.2, 0.2, "#c7ced9", cx + 8.4, 1.6, 1.5); box(0.1, 1.0, 1.6, "#ffffff", cx + 8.25, 3.2, 1.5); box(0.06, 0.06, 0.6, "#f05a28", cx + 7.9, 2.9, 1.5);
+  box(0.36, 0.36, 0.36, "#f59a36", cx + 3, 0.18, -1.5); // ball
+  // school building with the door the stretcher goes through
+  const sch = group(null, cx - 14, 0, 1);
+  box(4, 6, 26, "#f6e3c4", 0, 3, 0, sch); box(5, 0.8, 27, "#c9614a", 0, 6.3, 0, sch);
+  for (let i = -6; i <= 6; i++) { if (i === 1) continue; [1.8, 4.2].forEach(y => { box(0.1, 1.3, 1.3, "#9fd3f0", 2.02, y, i * 2, sch, false); box(0.2, 0.15, 1.5, "#ffffff", 2.05, y - 0.75, i * 2, sch, false); }); }
+  box(0.12, 2.8, 2.0, "#4a3426", 2.03, 1.4, 2.3, sch, false); box(0.2, 0.2, 2.4, "#ffffff", 2.08, 2.9, 2.3, sch, false);
+  const sign = canvasPlane(2.6, 0.5, (c, w, h) => { c.fillStyle = "#e53935"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 44px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✚ ENFERMARIA", w / 2, h / 2 + 2); }, 400, 78, { basic: true });
+  place(sign, 2.12, 3.45, 2.3, Math.PI / 2, sch);
+  // trees, bushes, flowers, a bench with Pedro's backpack
+  [[-6, -10, 1], [2, -10.5, 0.9], [9, -10, 1.1], [-4, 12, 1], [5, 12.5, 1.05], [12, 9, 0.9], [13, -6, 1]].forEach((t, k) => tree(cx + t[0], t[1], t[2], k % 2 === 0, k + 20));
+  [[-9, -8], [11, -9], [-8, 10.5], [13.5, 2]].forEach((b, k) => bush(cx + b[0], b[1], 1, k + 30));
+  flowerBed(cx - 9.5, -4, 1.6, 3.2, 41); flowerBed(cx - 9.5, 7.5, 1.6, 3.2, 42);
+  const bn = group(null, cx - 2, 0, -5.2); box(2, 0.12, 0.6, "#d9a066", 0, 0.5, 0, bn); box(2, 0.5, 0.1, "#d9a066", 0, 0.85, -0.28, bn); [-0.85, 0.85].forEach(x => box(0.12, 0.5, 0.5, "#7d8796", x, 0.25, 0, bn));
+  box(0.6, 0.55, 0.3, "#2f72d4", 0.4, 0.84, 0, bn); box(0.4, 0.25, 0.08, "#2457ad", 0.4, 0.7, 0.18, bn, false);
+  box(0.3, 0.12, 0.12, "#4fc3f7", cx - 2.6, 0.62, -5.2); // water bottle on the bench
+  for (let k = 0; k < 6; k++) {
+    const g = group(null, cx - 30 + k * 11, 13 + (k % 3) * 2, -20 + (k % 3) * 5);
+    box(4, 1.3, 2.4, "#ffffff", 0, 0, 0, g, false); box(2.6, 1.1, 2, "#ffffff", 1, 1, 0, g, false); box(2, 0.9, 1.8, "#ffffff", -1.8, 0.5, 0.2, g, false);
+    ambient.push((t, dt) => { g.position.x += dt * 0.6; if (g.position.x > cx + 35) g.position.x = cx - 35; });
+  }
+})();
 
 /* ---------- Labels ---------- */
 function rr(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
@@ -759,6 +915,186 @@ function buildPlayer() {
   player.g.position.set(START.x, 0, START.z); player.heading = START.h; player.g.rotation.y = START.h; player.walk = 0;
 }
 buildPlayer();
+
+/* ---------- Opening cutscene: Pedro faints on the court and is taken to the infirmary bed ---------- */
+function buildTeacher() {
+  return chunky((r, b) => {
+    const SK = "#d9a27c", SKs = "#c48d68", G = "#2e9e5b", Gd = "#23804a", W = "#ffffff", H = "#2a211d";
+    [r.legR, r.legL].forEach(L => { b(4, 3.4, 4.4, G, 0, -1.7, 0, L); b(0.5, 3.4, 4.5, W, 0, -1.7, 0, L); b(4.4, 1.6, 5.6, "#f26b3a", 0, -4.2, 0.4, L); b(4.5, 0.5, 5.7, W, 0, -5, 0.4, L); });
+    b(12.4, 3, 8.4, G, 0, 6.5, 0, r.body); b(12, 5.6, 8, G, 0, 11.4, 0, r.body); b(12.2, 0.8, 8.2, Gd, 0, 8.6, 0, r.body);
+    b(0.8, 5.6, 0.3, W, 0, 11.4, 4.05, r.body); b(1.2, 6, 0.3, W, -6, 11.2, 0, r.body); b(1.2, 6, 0.3, W, 6, 11.2, 0, r.body);
+    b(0.5, 4, 0.3, "#e53935", -1.6, 12.4, 4.15, r.body); b(0.5, 4, 0.3, "#e53935", 1.6, 12.4, 4.15, r.body); b(2.4, 1.4, 1, "#c7ced9", 0, 10.4, 4.3, r.body);
+    [r.armR, r.armL].forEach(A => { b(3.8, 3.4, 4.2, G, 0, -1.2, 0, A); b(4, 0.8, 4.4, W, 0, -3.2, 0, A); b(3.2, 3.8, 3.4, SK, 0, -5.3, 0, A); b(3.4, 1.6, 3.6, SKs, 0, -7.8, 0, A); });
+    const hd = group(r.body, 0, 14, 0); r.head = hd;
+    b(17, 15, 15, SK, 0, 7.5, 0, hd);
+    face(hd, b, { y: 6.2, z: 7.55, brows: H });
+    b(18, 3.5, 16, H, 0, 13.6, -0.3, hd); b(18, 8, 3, H, 0, 10, -6.6, hd); b(1.6, 4, 12, H, -8.9, 11, -0.5, hd); b(1.6, 4, 12, H, 8.9, 11, -0.5, hd);
+    b(18.4, 3.4, 16.4, "#f26b3a", 0, 16.4, -0.2, hd); b(18.4, 1, 6, "#d9552a", 0, 14.9, 10.5, hd); b(3, 1.2, 0.4, W, 0, 16.4, 8.05, hd);
+  });
+}
+function buildStretcher() {
+  const g = group(null);
+  box(0.95, 0.08, 2.1, "#c7ced9", 0, 0.66, 0, g); box(0.88, 0.14, 2.0, "#ff8a5c", 0, 0.77, 0, g); box(0.7, 0.1, 0.4, "#ffffff", 0, 0.88, -0.75, g);
+  [[-0.38, -0.85], [0.38, -0.85], [-0.38, 0.85], [0.38, 0.85]].forEach(p => { box(0.06, 0.55, 0.06, "#9aa5b8", p[0], 0.36, p[1], g); box(0.13, 0.13, 0.13, "#3a3f47", p[0], 0.065, p[1], g); });
+  [-0.48, 0.48].forEach(x => box(0.04, 0.06, 1.6, "#9aa5b8", x, 0.9, 0.1, g, false));
+  [-0.4, 0.4].forEach(x => box(0.05, 0.32, 0.05, "#9aa5b8", x, 0.82, -1.08, g, false)); box(0.95, 0.07, 0.07, "#e53935", 0, 0.98, -1.1, g, false);
+  return g;
+}
+const cut = (() => {
+  const nurse = buildNurse(), teacher = buildTeacher(), pRun = buildStudent(), pOut = buildStudent({ eyesClosed: true });
+  const ped = new THREE.Group(); ped.rotation.order = "YXZ"; ped.add(pRun.g, pOut.g); scene.add(ped, nurse.g, teacher.g);
+  const str = buildStretcher();
+  const stars = group(null); for (let k = 0; k < 3; k++) box(0.14, 0.14, 0.14, "#ffd45c", Math.cos(k * 2.1) * 0.5, 0, Math.sin(k * 2.1) * 0.5, stars, false);
+  const drops = [];
+  const actors = [nurse.g, teacher.g, ped, str, stars];
+  const show = v => actors.forEach(a => a.visible = v);
+  show(false);
+  scene.add(sun.target);
+  const cx = COURT_X;
+  const V = (x, z) => new THREE.Vector3(x, 0, z);
+  const pathIn = new THREE.CatmullRomCurve3([V(cx + 10, 8), V(cx + 5.5, 5.6), V(cx + 1.8, 3.6), V(cx - 1.0, 3.3)]);
+  const pathOut = new THREE.CatmullRomCurve3([V(cx - 1.0, 3.3), V(cx - 5, 3.3), V(cx - 9, 3.3), V(cx - 12.6, 3.3)]);
+  const pathRoom = new THREE.CatmullRomCurve3([V(14.6, -4), V(11, -4), V(6.8, -3.2), V(3.4, -2.6), V(2.45, -1.2), V(2.45, 0.9)]);
+  const FEET = V(cx - 0.4, 2.0);
+  const st = { t: 0, on: false, pedOnStr: false, onBed: false, env: "", shake: 0, lastCap: -1, sfxDone: {} };
+  const caps = [
+    [0, "Aula de Educação Física. O Pedro não tomou café da manhã: está há 12 horas sem comer."],
+    [4.2, "Com o exercício, a glicose no sangue cai. Ele fica pálido, treme e sua frio…"],
+    [6.9, "…e desmaia."],
+    [9.0, "A enfermeira chega com a maca e o professor ajuda."],
+    [12.9, "Eles levam o Pedro até a enfermaria da escola."],
+    [16.4, "Lá, ele é colocado no leito. Agora é com você."]
+  ];
+  const END = 22.6;
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const sm = (a, b, x) => { const u = clamp01((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+  const fadeEl = $("#fade"), capEl = $("#cutCap");
+  function setEnv(e) {
+    if (st.env === e) return; st.env = e;
+    if (e === "court") { scene.background.set("#9fd8f5"); scene.fog.color.set("#c4e8f7"); sun.target.position.set(cx, 0, 0); sun.position.set(cx + 10, 22, 9); }
+    else { scene.background.set(INDOOR_BG); scene.fog.color.set(INDOOR_BG); sun.target.position.set(0, 0, 0); sun.position.set(10, 22, 9); }
+  }
+  function walk(rig, ph, amp = 1) { const s = Math.sin(ph); rig.armR.rotation.set(-.7 * s * amp, 0, -.06); rig.armL.rotation.set(.7 * s * amp, 0, .06); rig.legR.rotation.x = .6 * s * amp; rig.legL.rotation.x = -.6 * s * amp; rig.body.position.y = Math.abs(Math.cos(ph)) * .8 * amp; }
+  function still(rig, t) { rig.armR.rotation.set(.04 * Math.sin(t * 1.8), 0, -.06); rig.armL.rotation.set(-.04 * Math.sin(t * 1.8), 0, .06); rig.legR.rotation.x = rig.legL.rotation.x = 0; rig.body.position.y = .25 * Math.sin(t * 1.8); }
+  function faceTo(o, tx, tz) { o.rotation.y = Math.atan2(tx - o.position.x, tz - o.position.z); }
+  // put the stretcher on a curve; the nurse pushes from behind, the teacher walks along the right side
+  function onPath(curve, u, t, teacherToo = true) {
+    const p = curve.getPointAt(clamp01(u)), d = curve.getTangentAt(clamp01(u)), h = Math.atan2(d.x, d.z);
+    str.position.copy(p); str.rotation.y = h;
+    const fx = Math.sin(h), fz = Math.cos(h), rx = -Math.cos(h), rz = Math.sin(h);
+    nurse.g.position.set(p.x - fx * 1.62, 0, p.z - fz * 1.62); nurse.g.rotation.y = h;
+    if (teacherToo === "behind") { teacher.g.position.set(p.x - fx * 2.7 + rx * 0.35, 0, p.z - fz * 2.7 + rz * 0.35); teacher.g.rotation.y = h; }
+    else if (teacherToo) { teacher.g.position.set(p.x + rx * 0.95 - fx * 0.2, 0, p.z + rz * 0.95 - fz * 0.2); teacher.g.rotation.y = h; }
+    if (st.pedOnStr) { ped.position.set(p.x + fx * 0.85, 1.18, p.z + fz * 0.85); ped.rotation.set(-Math.PI / 2, h, 0); }
+    return h;
+  }
+  function pushPose(moving, t) {
+    const ph = t * 8.5;
+    walk(nurse.rig, moving ? ph : 0, moving ? 1 : 0);
+    nurse.rig.armR.rotation.set(-1.62, 0, 0.12); nurse.rig.armL.rotation.set(-1.62, 0, -0.12);
+  }
+  function setCam(px, py, pz, lx, ly, lz, snap) {
+    tmpV.set(px, py, pz); tmpL.set(lx, ly, lz);
+    if (snap) { camPos.copy(tmpV); camLook.copy(tmpL); } else { camPos.lerp(tmpV, 0.06); camLook.lerp(tmpL, 0.1); }
+  }
+  function caption(t) {
+    let k = -1; caps.forEach((c, i) => { if (t >= c[0]) k = i; });
+    if (k !== st.lastCap) { st.lastCap = k; capEl.classList.remove("in"); void capEl.offsetWidth; capEl.textContent = k >= 0 ? caps[k][1] : ""; if (k >= 0) capEl.classList.add("in"); }
+  }
+  function once(key, t, at, fn) { if (t >= at && !st.sfxDone[key]) { st.sfxDone[key] = true; fn(); } }
+  function fade(t) {
+    let o = 0;
+    [[12.2, 12.6, 12.9], [15.6, 16.0, 16.4], [END - 0.7, END, END + 1]].forEach(([a, m, b]) => { if (t >= a && t < m) o = Math.max(o, (t - a) / (m - a)); else if (t >= m && t < b) o = Math.max(o, 1 - (t - m) / (b - m)); });
+    if (t < 0.5) o = Math.max(o, 1 - t / 0.5);
+    fadeEl.style.opacity = o.toFixed(3);
+  }
+  function step(dt, now) {
+    const t = st.t += dt;
+    caption(t); fade(t);
+    const sameShot = { A: t < 4.2, B: t >= 4.2 && t < 9.0, C: t >= 9.0 && t < 12.6, D: t >= 12.6 && t < 16.0, E: t >= 16.0 };
+    if (t < 16.0) setEnv("court"); else setEnv("indoor");
+    // --- Pedro on the court ---
+    if (t < 12.6) {
+      const runU = clamp01(t / 5.2), x = cx - 7 + 6.6 * (1 - (1 - runU) * (1 - runU));
+      ped.rotation.set(0, Math.PI / 2, 0); ped.position.set(x, 0, FEET.z);
+      const speed = 1 - runU;
+      st.runPh = (st.runPh || 0) + dt * (4 + 7 * speed);
+      [pRun.rig, pOut.rig].forEach(r => { if (t < 5.2) walk(r, st.runPh, 0.35 + 0.65 * speed); else still(r, now); });
+      if (t >= 5.0 && t < 6.9) { // dizzy: sway, hand to the head, sweat, stars
+        const w = sm(5.0, 5.6, t);
+        ped.rotation.z = Math.sin(t * 5.5) * 0.13 * w; ped.rotation.x = Math.sin(t * 3.1) * 0.06 * w;
+        [pRun.rig, pOut.rig].forEach(r => { r.armR.rotation.set(-2.5 * w, 0, -0.5 * w); r.head.rotation.z = Math.sin(t * 5.5) * 0.12 * w; });
+        stars.visible = true; stars.position.set(ped.position.x, 2.15, ped.position.z); stars.rotation.y = t * 4;
+        if (Math.random() < dt * 7) { const m = box(0.08, 0.12, 0.08, "#8fdcff", ped.position.x + (Math.random() - 0.5) * 0.9, 1.6, ped.position.z + (Math.random() - 0.5) * 0.6, null, false); drops.push({ m, v: 0, life: 0.9 }); }
+      } else stars.visible = false;
+      if (t >= 6.9) { // faints: falls backward and lies on the court
+        const f = clamp01((t - 6.9) / 0.6), e = f * f;
+        ped.rotation.set(-Math.PI / 2 * e, Math.PI / 2, 0); ped.position.y = 0.3 * e;
+        [pRun.rig, pOut.rig].forEach(r => { r.armR.rotation.set(-0.3 * (1 - e), 0, -0.25); r.armL.rotation.set(0, 0, 0.25); r.head.rotation.z = 0; });
+        pRun.g.visible = false; pOut.g.visible = true;
+        once("thud", t, 7.5, () => { st.shake = 0.35; beep([110, 70], 0.16, "sine", 0.16); });
+      } else { pRun.g.visible = true; pOut.g.visible = false; }
+    }
+    // --- teacher on the court ---
+    if (t < 9.0) {
+      once("whistle", t, 7.7, () => beep([2100, 2300, 2100], 0.07, "square", 0.03));
+      if (t < 7.7) { teacher.g.position.set(cx + 1.8, 0, -3.0); faceTo(teacher.g, ped.position.x, ped.position.z); still(teacher.rig, now); }
+      else { const u = sm(7.7, 8.9, t); teacher.g.position.set(cx + 1.8 + (cx - 1.3 - (cx + 1.8)) * u, 0, -3.0 + (0.45 + 3.0) * u); faceTo(teacher.g, ped.position.x - 0.8, FEET.z); if (u < 1) walk(teacher.rig, now * 11); else still(teacher.rig, now); }
+    }
+    // --- stretcher arrives (C), Pedro is placed on it during the fade, they leave (D), and arrive at the bed (E) ---
+    if (t >= 9.0 && t < 12.6) {
+      const u = sm(9.0, 12.0, t), h = onPath(pathIn, u, t, false); pushPose(u < 0.999, now);
+      if (t < 12.3) { teacher.g.position.set(cx - 1.3, 0, 0.45); faceTo(teacher.g, ped.position.x - 0.8, FEET.z); teacher.rig.armR.rotation.set(-0.8, 0, -0.1); teacher.rig.armL.rotation.set(-0.8, 0, 0.1); }
+    }
+    if (t >= 12.6 && t < 16.0) {
+      st.pedOnStr = true; pOut.g.visible = true; pRun.g.visible = false; [pOut.rig].forEach(r => { r.armR.rotation.set(0, 0, -0.1); r.armL.rotation.set(0, 0, 0.1); });
+      const u = clamp01((t - 12.8) / 3.4); onPath(pathOut, u, t); pushPose(u > 0 && u < 1, now); walk(teacher.rig, now * 8.5);
+    }
+    if (t >= 16.0) {
+      const u = sm(16.2, 20.2, t);
+      if (!st.onBed) { onPath(pathRoom, u, t, "behind"); pushPose(u < 0.999, now); if (u < 0.999) walk(teacher.rig, now * 8.5); else still(teacher.rig, now); }
+      if (t >= 20.3) { // lift Pedro from the stretcher onto the bed
+        st.pedOnStr = false;
+        const f = sm(20.3, 21.4, t), p0 = st.p0 || (st.p0 = ped.position.clone()), h0 = st.h0 != null ? st.h0 : (st.h0 = ped.rotation.y);
+        ped.position.set(p0.x + (0 - p0.x) * f, p0.y + (1.12 - p0.y) * f + Math.sin(f * Math.PI) * 0.4, p0.z + (1.0 - p0.z) * f);
+        ped.rotation.set(-Math.PI / 2, h0 * (1 - f), 0);
+        nurse.g.rotation.y = Math.atan2(-nurse.g.position.x, 0.6 - nurse.g.position.z) * sm(20.3, 20.8, t) + str.rotation.y * (1 - sm(20.3, 20.8, t));
+        nurse.rig.armR.rotation.set(-1.3, 0, -0.1); nurse.rig.armL.rotation.set(-1.3, 0, 0.1);
+        if (f >= 1 && !st.onBed) { st.onBed = true; }
+        if (st.onBed) { ped.visible = false; pedroLying.g.visible = true; blanket.position.y = 1.08; still(nurse.rig, now); }
+      }
+    }
+    // sweat drops
+    for (let q = drops.length - 1; q >= 0; q--) { const d = drops[q]; d.v -= 6 * dt; d.m.position.y += d.v * dt; d.life -= dt; if (d.life <= 0 || d.m.position.y < 0.05) { scene.remove(d.m); drops.splice(q, 1); } }
+    // cameras
+    const P = ped.position, S2 = str.position;
+    if (sameShot.A) setCam(cx - 4.5 + t * 0.4, 3.0, 10.5, P.x + 1.2, 1.0, 1.6, t < 0.05);
+    else if (sameShot.B) setCam(cx + 1.6, 1.75, 5.8, FEET.x - 0.3, t < 6.9 ? 1.25 : 0.7, FEET.z, !st.snapB && (st.snapB = true));
+    else if (sameShot.C) setCam(cx - 4.8, 5.0, 8.6, cx - 0.3, 0.6, 2.6, !st.snapC && (st.snapC = true));
+    else if (sameShot.D) setCam(S2.x - 0.6, 2.5, 9.8, S2.x - 0.9, 0.9, 3.2, !st.snapD && (st.snapD = true));
+    else setCam(-2.2, 5.0, 7.6, st.onBed || t > 20.3 ? 0.8 : S2.x * 0.75, 0.9, st.onBed || t > 20.3 ? 0.3 : S2.z * 0.75, !st.snapE && (st.snapE = true));
+    if (st.shake > 0) { st.shake -= dt; camPos.x += (Math.random() - 0.5) * 0.18; camPos.y += (Math.random() - 0.5) * 0.12; }
+    if (t >= END) finish();
+  }
+  function start() {
+    Object.assign(st, { t: 0, on: true, pedOnStr: false, onBed: false, env: "", shake: 0, lastCap: -1, sfxDone: {}, runPh: 0, p0: null, h0: null, snapB: false, snapC: false, snapD: false, snapE: false });
+    show(true); stars.visible = false; ped.visible = true; pRun.g.visible = true; pOut.g.visible = false;
+    pedroLying.g.visible = false; pedroUp.g.visible = false; player.g.visible = false;
+    str.position.set(cx + 12, 0, 9); nurse.g.position.set(cx + 13, 0, 10); // waiting off screen
+    $("#startScreen").hidden = true; $("#cut").hidden = false; capEl.textContent = ""; fadeEl.style.opacity = 1;
+    S.mode = "cutscene"; setEnv("court");
+    setTimeout(() => $("#skipCut").focus({ preventScroll: true }), 50);
+  }
+  function finish() {
+    if (!st.on) return; st.on = false;
+    show(false); drops.forEach(d => scene.remove(d.m)); drops.length = 0;
+    setEnv("indoor"); $("#cut").hidden = true; fadeEl.style.opacity = 0;
+    beginGame();
+  }
+  $("#skipCut").onclick = finish;
+  addEventListener("keydown", e => { if (st.on && st.t > 0.8 && (e.code === "Escape" || e.code === "Enter" || e.code === "Space")) { e.preventDefault(); finish(); } });
+  return { start, step, get on() { return st.on; } };
+})();
 
 const confetti = [];
 function burst(x, y, z, n = 50) {
@@ -1235,7 +1571,7 @@ $("#startBtn").onclick = () => {
   S.name = name;
   if (isTouch && !isFullscreen() && !isStandalone()) enterFullscreen(true); // phones: entering the game also goes full screen
   music.start(); // needs this tap to be allowed to play
-  beginGame();
+  cut.start();
 };
 $("#rankFromStart").onclick = () => showRanking("start");
 
@@ -1283,12 +1619,12 @@ function beginGame() {
   lastShown = -1; updateHUD();
   modal.innerHTML = ""; openModal("lesson");
   const panel = el("div", "panel");
-  panel.append(panelHead(portraits.pedro, "Caso · pátio da escola", "Paciente: Pedro, 16 anos", null));
+  panel.append(panelHead(portraits.pedro, "Caso · enfermaria da escola", "Paciente: Pedro, 16 anos", null));
   const body = el("div", "panel-body");
   const c = el("div", "concept");
   c.append(el("h3", null, "O que aconteceu"),
     el("p", null, "O Pedro não tomou café da manhã e está há 12 horas sem comer. Na aula de Educação Física, ficou pálido, começou a tremer, suou frio e desmaiou por alguns instantes. Ele está em jejum e num estado de estresse pós-exercício. Agora está deitado na maca, sonolento e confuso."),
-    el("p", null, `${S.name}, você é a enfermeira de plantão. Ele está deitado na maca da tenda, ao lado da quadra. Em volta da tenda há ${N} estações. Em cada uma, leia o quadro e resolva o desafio para liberar a próxima. A estação certa tem uma seta amarela em cima.`));
+    el("p", null, `${S.name}, você é a enfermeira de plantão. Ele está deitado no leito da enfermaria. Pela sala há ${N} estações. Em cada uma, leia o quadro e resolva o desafio para liberar a próxima. A estação certa tem uma seta amarela em cima.`));
   body.append(c);
   const board = el("div", "board");
   const r = el("div", "refs"); r.append(el("h3", null, "Regras"));
@@ -1358,7 +1694,7 @@ function collide(p) {
       if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
     }
   }
-  p.x = Math.max(-WB, Math.min(WB, p.x)); p.z = Math.max(-11.2, Math.min(WB, p.z));
+  p.x = Math.max(-WB, Math.min(WB, p.x)); p.z = Math.max(WZ0, Math.min(WB, p.z));
 }
 const pose = { aR: 0, aL: 0, lR: 0, lL: 0, by: 0 };
 const tmpV = new THREE.Vector3(), tmpL = new THREE.Vector3();
@@ -1398,8 +1734,10 @@ function tick() {
 
   // camera
   if (S.mode === "start") {
-    const a = t * 0.12; tmpV.set(Math.sin(a) * 13, 6.5, Math.cos(a) * 13); tmpL.set(0, 1.0, 0);
+    const a = t * 0.12; tmpV.set(Math.sin(a) * 8, 4.0, Math.cos(a) * 8); tmpL.set(0, 1.0, 0);
     camPos.lerp(tmpV, 0.04); camLook.lerp(tmpL, 0.08);
+  } else if (S.mode === "cutscene") {
+    cut.step(dt, t);
   } else if (S.mode === "ending" || S.mode === "over") {
     tmpV.set(-0.2, 2.2, 4.4); tmpL.set(-0.9, 1.2, 0.3); camPos.lerp(tmpV, 0.04); camLook.lerp(tmpL, 0.06);
   } else {
@@ -1407,7 +1745,7 @@ function tick() {
     const yaw = player.heading + look.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw), rx = -Math.cos(yaw), rz = Math.sin(yaw);
     const dist = camera.aspect < 0.8 ? 6.0 : 5.2;
     tmpV.set(pg.position.x - fx * dist + rx * 0.8, 2.6 + look.pitch * 1.2, pg.position.z - fz * dist + rz * 0.7);
-    tmpV.x = Math.max(-WB - 0.8, Math.min(WB + 0.8, tmpV.x)); tmpV.z = Math.max(-11.6, Math.min(WB + 0.8, tmpV.z)); tmpV.y = Math.min(RH, tmpV.y);
+    tmpV.x = Math.max(-WB - 0.4, Math.min(WB + 0.4, tmpV.x)); tmpV.z = Math.max(WZ0 - 0.4, Math.min(WB + 0.4, tmpV.z)); tmpV.y = Math.min(RH, tmpV.y);
     tmpL.set(pg.position.x + fx * 5 + rx * 0.35, 1.35 - look.pitch * 2.2, pg.position.z + fz * 5 + rz * 0.35);
     const a = snapCamera ? 1 : 1 - Math.pow(0.0008, dt);
     camPos.lerp(tmpV, a); camLook.lerp(tmpL, snapCamera ? 1 : 1 - Math.pow(0.0004, dt)); snapCamera = false;
@@ -1423,7 +1761,7 @@ function tick() {
   });
   if (S.mode === "play" && near === null && Math.hypot(pg.position.x, pg.position.z) < 2.3) near = "pedro";
   const cs = stations[Math.min(S.phase, N - 1)];
-  ring.visible = arrow.visible = S.phase < N && S.mode !== "start";
+  ring.visible = arrow.visible = S.phase < N && S.mode !== "start" && S.mode !== "cutscene";
   ring.position.x = cs.p.pos[0]; ring.position.z = cs.p.pos[1]; ring.material.opacity = 0.5 + Math.sin(t * 4) * 0.25;
   arrow.position.set(cs.p.pos[0], 3.85 + Math.sin(t * 4) * 0.1, cs.p.pos[1]); arrow.rotation.y = t * 1.2;
   const tb = $("#talk");
