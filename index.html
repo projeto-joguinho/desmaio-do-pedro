@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Press+Start+2P&family=VT323&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: full-screen third-person voxel infirmary (canvas) with clinical report panels on top. Single light clinical look. */
 :root{
@@ -211,59 +211,6 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 #skipCut{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:calc(9vh + 12px);pointer-events:auto}
 #thanks{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:28;pointer-events:none}#thanks .btn{pointer-events:auto}
 #fade{position:fixed;inset:0;background:#0d0f14;opacity:0;pointer-events:none;z-index:39}
-/* Station boards: chalkboard with a block wood frame (Press Start 2P titles, VT323 chalk text) */
-.panel{background:#2f6b57;color:#f4fff8;border:10px solid #c98d57;border-radius:0;box-shadow:inset 0 0 0 3px #1d4537,0 8px 0 #8a5a3c,0 18px 40px rgba(0,0,0,.3);font-family:"VT323",monospace;font-size:21px;line-height:1.15}
-.panel-head{background:#285c4b;border-bottom:3px dashed rgba(244,255,248,.22)}
-.panel-head img{background:#f4fff8;border:3px solid #c98d57;border-radius:0}
-.panel-head .eyebrow{font-family:"VT323",monospace;font-size:19px;letter-spacing:.04em;text-transform:none;font-weight:400;color:#bfe3d3}
-.panel-head h2{font-family:"Press Start 2P",monospace;font-weight:400;font-size:clamp(13px,2.4vw,17px);line-height:1.4;color:#ffd45c;text-shadow:3px 3px 0 #1d4537;margin:4px 0 0}
-.panel .icon-btn{border-radius:0;background:#f4fff8;color:#1d4537;border:0;box-shadow:0 3px 0 #1d4537}
-.panel h3{font-family:"Press Start 2P",monospace!important;font-size:10px!important;letter-spacing:.04em!important;font-weight:400!important;color:#ffd45c!important;text-transform:none!important;margin-bottom:6px}
-.panel p,.panel li{margin:0;line-height:1.2}
-.concept{font-size:22px;gap:8px;max-width:none}
-.concept p::before{content:"> ";color:#8fe0b5}
-.board > div{border-radius:0}
-.refs{background:#285c4b;border:2px solid #1d4537}
-.refs table{font-size:20px}
-.refs td{border-bottom:1px dashed rgba(244,255,248,.25)}
-.refs td:last-child{font-family:"VT323",monospace;color:#8fe0b5;font-weight:400}
-.clinical{background:rgba(255,143,168,.12);border:2px solid #ff8fa8;font-size:21px;line-height:1.15}
-.clinical h3{color:#ff9fb6!important}
-.panel .note-pause{color:#bfe3d3;font-size:18px}
-.panel .btn{font-family:"VT323",monospace;font-size:22px;font-weight:400;border-radius:0;padding:8px 16px;background:#ffd45c;color:#3b2a05;box-shadow:0 4px 0 #b48a1f}
-.panel .btn:active{box-shadow:0 1px 0 #b48a1f}
-.panel .btn.ghost{background:transparent;color:#f4fff8;border:2px solid #f4fff8;box-shadow:0 4px 0 #1d4537}
-.panel .btn.teal{background:#8fe0b5;color:#1d4537;box-shadow:0 4px 0 #4f9e78}
-.panel .btn:disabled{opacity:.5}
-.step-label{font-family:"Press Start 2P",monospace;font-weight:400;font-size:10px;letter-spacing:.04em;text-transform:none;color:#ffd45c}
-.q-text{font-family:"VT323",monospace;font-weight:400;font-size:26px;line-height:1.1;color:#fff}
-.opt{border-radius:0;font-family:"VT323",monospace;font-weight:400;font-size:22px;line-height:1.05;box-shadow:0 4px 0 rgba(0,0,0,.35)}
-.opt.is-ok{outline-color:#ffd45c}
-.fb{font-family:"VT323",monospace;font-weight:400;font-size:22px;border-radius:0}
-.fb.ok{background:#8fe0b5;color:#1d4537}
-.fb.bad{background:#ff8fa8;color:#5a1426}
-.ficha{border-radius:0;border:3px solid #c98d57;font-family:"VT323",monospace;color:#1b2333}
-.ficha .fh{background:#1d4537;font-family:"Press Start 2P",monospace;font-weight:400;font-size:10px}
-.ficha table{font-size:20px}
-.ficha .val,.ficha .ref{font-family:"VT323",monospace}
-.ficha .ref{font-size:17px}
-.chip{border-radius:0;border:0;background:#f4fff8;color:#1d4537;font-family:"VT323",monospace;font-weight:400;font-size:21px;box-shadow:0 3px 0 #1d4537}
-.chip small{font-family:"VT323",monospace;font-size:16px;color:#4f6f62}
-.chip.sel{background:#ffd45c;box-shadow:0 3px 0 #b48a1f}
-.bin{border-radius:0;border:2px dashed rgba(244,255,248,.45);background:#285c4b;color:#f4fff8;font-family:"VT323",monospace}
-.bin .bt{font-family:"Press Start 2P",monospace;font-weight:400;font-size:11px;color:#ffd45c}
-.bin .bs{font-size:17px;color:#bfe3d3}
-.bin .in span{border-radius:0;border:0;background:#f4fff8;color:#1d4537;font-weight:400;font-size:17px}
-.bin.ready{border:2px solid #ffd45c;background:#346f5b}
-.mbtn{border-radius:0;border:2px solid transparent;background:#f4fff8;color:#1d4537;font-family:"VT323",monospace;font-weight:400;font-size:21px;line-height:1.05;box-shadow:0 3px 0 #1d4537}
-.mbtn.term{font-weight:400;font-size:22px}
-.mbtn.sel{background:#ffd45c;border-color:#b48a1f}
-.slots{border-radius:0;background:#285c4b;border:2px dashed rgba(244,255,248,.45)}
-.slots .s{border-radius:0;background:#ffd45c;color:#3b2a05;font-family:"VT323",monospace;font-weight:400;font-size:20px}
-.slots .s small{font-size:15px}
-.slots .arrow{color:#8fe0b5}
-.slots .ph{color:#bfe3d3;font-size:18px}
-@media (max-width:640px){ .concept{font-size:21px} .panel{border-width:7px} }
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
 <meta name="theme-color" content="#14213d">
