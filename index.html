@@ -682,6 +682,13 @@ function drawClock() {
   garland(0, 4.35, ZB + 0.17, 0, 23); garland(-X + 0.17, 4.35, 1.4, Math.PI / 2, 21); garland(X - 0.17, 4.35, 4.0, -Math.PI / 2, 15); garland(0, 4.35, ZF - 0.17, Math.PI, 23);
   poster(-3.75, 3.0, ZB + 0.17, 0, "Beba água", "Hidrate-se no treino", "#5aa9e6", "drop");
   poster(3.75, 3.0, ZB + 0.17, 0, "Lave as mãos", "Antes de comer", "#6cc98a", "hands");
+  // banner on the back wall, above the middle window
+  const banner = canvasPlane(7.6, 0.95, (c, w, h) => {
+    c.fillStyle = "#ffffff"; c.fillRect(0, 0, w, h); c.fillStyle = "#2f6fd0"; c.fillRect(6, 6, w - 12, h - 12);
+    c.fillStyle = "#ffd45c"; c.fillRect(6, h - 22, w - 12, 16);
+    c.fillStyle = "#ffffff"; c.font = "bold 92px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("Bioquímica UFMT", w / 2, h / 2 - 4);
+  }, 1120, 140, { basic: true });
+  place(banner, 0, 4.33, ZB + 0.24, 0);
   poster(-X + 0.17, 3.0, 7.6, Math.PI / 2, "Café da manhã", "Comece o dia bem", "#ef6f6c", "apple");
   poster(X - 0.17, 3.0, 4.8, -Math.PI / 2, "Coração", "Cuide dele", "#a98ae6", "heart");
   poster(-2.2, 3.0, ZF - 0.17, Math.PI, "Durma bem", "8 horas por noite", "#f7b33e", "sleep");
@@ -824,6 +831,16 @@ const COURT_X = 140;
   const bn = group(null, cx - 2, 0, -5.2); box(2, 0.12, 0.6, "#d9a066", 0, 0.5, 0, bn); box(2, 0.5, 0.1, "#d9a066", 0, 0.85, -0.28, bn); [-0.85, 0.85].forEach(x => box(0.12, 0.5, 0.5, "#7d8796", x, 0.25, 0, bn));
   box(0.6, 0.55, 0.3, "#2f72d4", 0.4, 0.84, 0, bn); box(0.4, 0.25, 0.08, "#2457ad", 0.4, 0.7, 0.18, bn, false);
   box(0.3, 0.12, 0.12, "#4fc3f7", cx - 2.6, 0.62, -5.2); // water bottle on the bench
+  // UFMT sign beside the court
+  const us = group(null, cx + 3.5, 0, -7.6);
+  [-2.1, 2.1].forEach(x => box(0.22, 3.2, 0.22, "#8a5a3c", x, 1.6, 0, us));
+  box(4.9, 1.7, 0.2, "#ffffff", 0, 2.75, 0, us);
+  const ufmt = canvasPlane(4.6, 1.45, (c, w, h) => {
+    c.fillStyle = "#1f4f9c"; c.fillRect(0, 0, w, h); c.fillStyle = "#23946b"; c.fillRect(0, h - 26, w, 26);
+    c.fillStyle = "#ffffff"; c.font = "bold 150px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("UFMT", w / 2, h / 2 - 10);
+  }, 640, 200, { basic: true });
+  place(ufmt, 0, 2.75, 0.11, 0, us);
+  flowerBed(cx + 3.5, -6.8, 3.6, 0.6, 43);
   for (let k = 0; k < 6; k++) {
     const g = group(null, cx - 30 + k * 11, 13 + (k % 3) * 2, -20 + (k % 3) * 5);
     box(4, 1.3, 2.4, "#ffffff", 0, 0, 0, g, false); box(2.6, 1.1, 2, "#ffffff", 1, 1, 0, g, false); box(2, 0.9, 1.8, "#ffffff", -1.8, 0.5, 0.2, g, false);
