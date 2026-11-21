@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Pixelify+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: full-screen third-person voxel infirmary (canvas) with clinical report panels on top. Single light clinical look. */
 :root{
@@ -211,6 +211,7 @@ kbd{font-family:var(--font-m);background:#fff;border:1px solid var(--line);borde
 #skipCut{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:calc(9vh + 12px);pointer-events:auto}
 #thanks{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:28;pointer-events:none}#thanks .btn{pointer-events:auto}
 #fade{position:fixed;inset:0;background:#0d0f14;opacity:0;pointer-events:none;z-index:39}
+.panel,.panel button,.panel h2,.panel h3,.panel table,.panel .refs td:last-child,.ficha .val,.ficha .ref{font-family:"Pixelify Sans",var(--font-b)}
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
 </style>
 <meta name="theme-color" content="#14213d">
@@ -357,48 +358,46 @@ const PHASES = [
   {
     key: "triagem", station: "Triagem", title: "Glicose e glicemia", color: "#c43d3d", pos: [-6.0, 1.5],
     paras: [
-      "A glicose é um açúcar (C₆H₁₂O₆) que vem dos alimentos com carboidrato, como pão, arroz e frutas. O sangue leva a glicose até as células.",
-      "Ela é o principal combustível do corpo. O cérebro é quem mais depende dela: gasta cerca de 120 g por dia e não guarda estoque.",
-      "Glicemia é a quantidade de glicose no sangue. Ela sobe no estado pós-prandial (logo depois de comer) e cai no jejum (muitas horas sem comer)."
+      "A glicose é o açúcar que vem do pão, do arroz e das frutas. É o principal combustível do corpo, e o cérebro é quem mais depende dela.",
+      "Glicemia é a glicose no sangue: sobe no estado pós-prandial (depois de comer) e cai no jejum."
     ],
     refs: [["Normal em jejum", "70 a 99 mg/dL"], ["Pós-prandial (2 h após comer)", "até 140 mg/dL"], ["Glicose baixa (hipoglicemia)", "abaixo de 70"], ["Glicose muito baixa", "abaixo de 54"], ["mg/dL", "miligramas por decilitro"]],
-    clinical: "Em jejum há 12 horas e em estresse pós-exercício, o Pedro ficou com a glicose em 48 mg/dL. O corpo reagiu liberando catecolaminas (adrenalina e noradrenalina, feitas a partir da dopa), que causam tremor, suor frio e coração acelerado. Ele desmaiou porque o cérebro ficou sem combustível.",
+    clinical: "Depois de 12 h de jejum e do exercício, a glicose do Pedro caiu para 48 mg/dL. As catecolaminas (adrenalina e noradrenalina, feitas a partir da dopa) causaram tremor e suor frio, e o cérebro ficou sem combustível.",
     hint: "Compare cada resultado da ficha com o valor de referência ao lado. Releia a parte sobre as catecolaminas.",
     summary: "A glicose é o principal combustível do corpo. Abaixo de 70 mg/dL é hipoglicemia; o Pedro estava com 48 mg/dL."
   },
   {
     key: "nutricao", station: "Bioenergética", title: "Catabolismo e anabolismo", color: "#b9800f", pos: [-3.6, -5.6],
     paras: [
-      "Bioenergética estuda como o corpo obtém, transforma e usa energia. A energia dos alimentos fica guardada nas ligações químicas de moléculas como glicose, gorduras e proteínas.",
-      "Metabolismo são todas as reações do corpo, e tem dois lados. Catabolismo quebra moléculas grandes em menores e libera energia (digerir amido, quebrar glicogênio, queimar glicose). Anabolismo monta moléculas grandes e gasta energia (guardar glicogênio, formar músculo, guardar gordura).",
-      "O ATP liga os dois lados: o catabolismo produz ATP e o anabolismo gasta. No estado pós-prandial predomina o anabolismo (o corpo guarda). No jejum e no exercício predomina o catabolismo (o corpo usa as reservas)."
+      "Catabolismo quebra moléculas grandes e libera energia: digerir o amido, quebrar glicogênio, queimar glicose.",
+      "Anabolismo monta moléculas grandes e gasta energia: guardar glicogênio, formar músculo, guardar gordura.",
+      "O ATP liga os dois. No pós-prandial predomina o anabolismo; no jejum e no exercício, o catabolismo."
     ],
     refs: [["Catabolismo", "quebra · libera energia"], ["Anabolismo", "constrói · gasta energia"], ["Moeda de energia", "ATP"], ["Estado pós-prandial", "predomina anabolismo"], ["Jejum e exercício", "predomina catabolismo"]],
-    clinical: "Depois de 12 horas de jejum e da Educação Física, o Pedro estava em pleno catabolismo, quebrando glicogênio e gordura para manter a glicose do sangue. Sem carboidrato chegando, a reserva rápida acabou.",
+    clinical: "Em jejum e depois do exercício, o Pedro estava em catabolismo, gastando as reservas. Sem comida chegando, a reserva rápida de glicose acabou.",
     hint: "Pergunte para cada processo: ele quebra ou monta moléculas? Quebrar libera energia (catabolismo); montar gasta energia (anabolismo).",
     summary: "Catabolismo quebra moléculas e libera energia (produz ATP); anabolismo constrói moléculas e gasta ATP. No jejum predomina o catabolismo; no pós-prandial, o anabolismo."
   },
   {
     key: "endocrino", station: "Hormônios", title: "Insulina e glucagon", color: "#2f6fd0", pos: [3.6, -5.6],
     paras: [
-      "O pâncreas, atrás do estômago, controla a glicose do sangue com dois hormônios (mensageiros químicos): insulina e glucagon.",
-      "No estado pós-prandial a glicose sobe, e o pâncreas libera insulina. Ela faz a glicose entrar nas células e o fígado guardar o excesso como glicogênio. A glicose do sangue baixa.",
-      "No jejum ou no exercício a glicose cai, e o pâncreas libera glucagon. Ele manda o fígado quebrar o glicogênio e soltar glicose. No estresse, as catecolaminas (como a adrenalina) ajudam. A glicose do sangue sobe."
+      "O pâncreas controla a glicose do sangue com dois hormônios: insulina e glucagon.",
+      "Pós-prandial: a insulina leva a glicose para as células e o fígado guarda o excesso como glicogênio. A glicose baixa.",
+      "Jejum ou exercício: o glucagon, com ajuda das catecolaminas no estresse, faz o fígado soltar glicose. A glicose sobe."
     ],
     refs: [["Insulina", "baixa a glicose"], ["Glucagon", "aumenta a glicose"], ["Estado pós-prandial", "predomina a insulina"], ["Jejum", "predomina o glucagon"], ["Estoque no fígado", "cerca de 100 g"]],
-    clinical: "Em jejum, o pâncreas do Pedro já liberava glucagon, e o estresse pós-exercício somou as catecolaminas. Mas o estoque do fígado estava no fim e os músculos gastaram muita glicose. O corpo não repôs a tempo.",
+    clinical: "O corpo do Pedro já liberava glucagon e catecolaminas, mas o glicogênio do fígado acabou e os músculos gastaram muita glicose.",
     hint: "Insulina e glucagon fazem coisas opostas. Pense em qual estado o Pedro está: pós-prandial ou jejum?",
     summary: "No estado pós-prandial, o pâncreas libera insulina e a glicose baixa; no jejum, libera glucagon, que usa o glicogênio do fígado para subir a glicose."
   },
   {
     key: "metabolismo", station: "Energia da célula", title: "Como a glicose vira energia", color: "#7a4fb5", pos: [6.0, 1.5],
     paras: [
-      "Nas células, a glicose vira ATP, a moeda de energia que paga o trabalho dos músculos, dos neurônios e de quase tudo. Esse processo é a respiração celular.",
-      "Primeiro vem a glicólise, no citoplasma: a glicose é quebrada ao meio. Depois os pedaços entram na mitocôndria, a usina da célula, e passam pelo ciclo de Krebs.",
-      "Por fim, na cadeia respiratória, a mitocôndria usa o oxigênio para fazer a maior parte do ATP. Sobram gás carbônico (sai ao expirar) e água."
+      "Nas células, a glicose vira ATP, a moeda de energia. Esse processo é a respiração celular.",
+      "A ordem é: glicólise (no citoplasma) → ciclo de Krebs (na mitocôndria) → cadeia respiratória, que usa oxigênio e faz a maior parte do ATP."
     ],
     refs: [["Resumo", "glicose + oxigênio → gás carbônico + água + energia"], ["ATP por glicose", "cerca de 30"], ["Onde se forma mais ATP", "mitocôndria"], ["Gasto do cérebro", "≈ 20% da energia do corpo"]],
-    clinical: "O cérebro depende quase só de glicose. Com 48 mg/dL, produziu pouco ATP e o Pedro desmaiou. Quando a glicose volta ao sangue, o ATP se recupera em poucos minutos.",
+    clinical: "Com a glicose em 48 mg/dL, o cérebro fez pouco ATP e o Pedro desmaiou. Com glicose de volta no sangue, ele se recupera em minutos.",
     hint: "Comece pelo combustível e termine na moeda de energia. A primeira quebra da glicose acontece fora da mitocôndria.",
     summary: "Na respiração celular, a glicose passa por glicólise, ciclo de Krebs e cadeia respiratória e vira ATP, a energia da célula."
   }
