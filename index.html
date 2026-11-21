@@ -467,7 +467,7 @@ function face(hd, b, o) {
   const E = "#1d1418";
   if (o.closed) { b(3, 0.7, 0.4, E, -3.6, o.y, o.z, hd); b(3, 0.7, 0.4, E, 3.6, o.y, o.z, hd); }
   else {
-    b(2.4, 3.2, 0.4, E, -3.6, o.y, o.z, hd); b(2.4, 3.2, 0.4, E, 3.6, o.y, o.z, hd);
+    b(2.4, 3.2, 0.4, o.eyes || E, -3.6, o.y, o.z, hd); b(2.4, 3.2, 0.4, o.eyes || E, 3.6, o.y, o.z, hd);
     b(0.9, 0.9, 0.3, "#ffffff", -3.2, o.y + 0.8, o.z + 0.2, hd); b(0.9, 0.9, 0.3, "#ffffff", 4.0, o.y + 0.8, o.z + 0.2, hd);
     if (o.lashes) { b(0.8, 0.8, 0.3, E, -5.1, o.y + 1.6, o.z, hd); b(0.8, 0.8, 0.3, E, 5.1, o.y + 1.6, o.z, hd); }
   }
@@ -1145,7 +1145,7 @@ function buildGirl(o) {
     if (o.phone) b(3.8, 6.4, 0.9, o.phone, 0, -8.6, 2.4, r.armL);
     const hd = group(r.body, 0, 14, 0); r.head = hd;
     b(17, 15, 15, SK, 0, 7.5, 0, hd);
-    face(hd, b, { y: 6.2, z: 7.55, blush: "#f08f8f", lashes: true, brows: H });
+    face(hd, b, { y: 6.2, z: 7.55, blush: "#f08f8f", lashes: true, brows: H, eyes: o.eyes });
     if (o.style === "curly") {
       b(22, 6, 19, H, 0, 14.5, -1.5, hd); b(4, 12, 16, H, -10.4, 6, -1.5, hd); b(4, 12, 16, H, 10.4, 6, -1.5, hd); b(21, 15, 5, H, 0, 7, -8.6, hd);
       for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; b(3.2, 3.2, 3.2, k % 2 ? Hl : H, Math.cos(a) * 11.6, 9 + Math.sin(a) * 7.5, -1 + (k % 3) * 2 - 2, hd); }
@@ -1179,7 +1179,7 @@ const team = (() => {
   const defs = [
     { name: "Maria Eugênia", color: "#c0392b", skin: "#e8b48e", skinS: "#d9a07a", hair: "#3a2418", hairL: "#553525", top: "#8a6a55", plaid: "#5e4637", sleeves: true, pants: "#26262b", shoes: "#f3f1ee", nails: "#d42a2a", style: "wavy", bangs: "curtain" },
     { name: "Nátali", color: "#7a4fb5", skin: "#b9805c", skinS: "#a86f4d", hair: "#1e1512", hairL: "#33251f", top: "#1c2030", bare: true, pants: "#3b4f7a", shoes: "#f3f1ee", necklace: true, style: "curly" },
-    { name: "Thayna", color: "#2f6fd0", skin: "#f5d3bd", skinS: "#e8bfa5", hair: "#7a5638", hairL: "#96714f", top: "#f7f7f5", sleeves: true, pants: "#8fa8cf", shoes: "#f3f1ee", necklace: true, style: "straight" },
+    { name: "Thayna", color: "#2f6fd0", eyes: "#1f3f7a", skin: "#f5d3bd", skinS: "#e8bfa5", hair: "#7a5638", hairL: "#96714f", top: "#f7f7f5", sleeves: true, pants: "#8fa8cf", shoes: "#f3f1ee", necklace: true, style: "straight" },
     { name: "Amanda", color: "#d6457a", skin: "#f2d6c6", skinS: "#e5c2ae", hair: "#141012", hairL: "#2a2226", top: "#16161a", bare: true, straps: true, pants: "#2b2b33", shoes: "#f3f1ee", nails: "#1e2a4a", phone: "#f49ab0", necklace: true, style: "wavy", bangs: "side" }
   ];
   const xs = [-2.5, -0.85, 0.85, 2.5];
