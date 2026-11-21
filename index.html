@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Pixelify+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 /* Layout: full-screen third-person voxel infirmary (canvas) with clinical report panels on top. Single light clinical look. */
 :root{
@@ -15,9 +15,9 @@
   --warn:#c43d3d; --warn-soft:#fbe8e8; --amber:#b9800f;
   --o1:#c9473d; --o2:#2f6fd0; --o3:#b9800f; --o4:#23946b;
   --gold:#e3b23c; --silver:#c7ced9; --bronze:#c98a5f; --navy:#14213d; --navy-2:#24467f;
-  --font-d:"Silkscreen",ui-monospace,monospace;
-  --font-b:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --font-m:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --font-d:"Pixelify Sans","Silkscreen",ui-monospace,monospace;
+  --font-b:"Pixelify Sans","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-m:"Pixelify Sans","IBM Plex Mono",ui-monospace,Consolas,monospace;
   color-scheme:light;
 }
 [hidden]{display:none!important}
@@ -532,9 +532,11 @@ const INDOOR_BG = "#fbe6d4";
 const obstacles = [];
 const FLOWER = ["#e8453c", "#f7c531", "#f27ea9", "#fbf6ee", "#f59a36", "#b67be0"];
 const RAINBOW = ["#ef6f6c", "#f7b33e", "#f6e05e", "#6cc98a", "#5aa9e6", "#a98ae6"];
+const canvasPlanes = [];
 function canvasPlane(w, h, draw, pw, ph, opts = {}) {
   const cv = document.createElement("canvas"); cv.width = pw; cv.height = ph; draw(cv.getContext("2d"), pw, ph);
   const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter;
+  canvasPlanes.push({ cv, draw, t });
   const mat = opts.basic ? new THREE.MeshBasicMaterial({ map: t, transparent: !!opts.transparent }) : new THREE.MeshLambertMaterial({ map: t, transparent: !!opts.transparent });
   if (opts.transparent) mat.side = THREE.DoubleSide;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
@@ -636,14 +638,14 @@ function garland(x, y, z, ry, w) {
 function posterDraw(title, sub, bg, icon) {
   return (x, w, h) => {
     x.fillStyle = "#ffffff"; x.fillRect(0, 0, w, h); x.fillStyle = bg; x.fillRect(10, 10, w - 20, h - 20);
-    x.fillStyle = "#ffffff"; x.textAlign = "center"; x.font = "bold 34px Inter, sans-serif"; x.fillText(title, w / 2, 58);
-    x.font = "600 20px Inter, sans-serif"; x.fillText(sub, w / 2, h - 30);
+    x.fillStyle = "#ffffff"; x.textAlign = "center"; x.font = "bold 34px 'Pixelify Sans', sans-serif"; x.fillText(title, w / 2, 58);
+    x.font = "600 20px 'Pixelify Sans', sans-serif"; x.fillText(sub, w / 2, h - 30);
     const cx = w / 2, cy = h / 2 + 8; x.save(); x.translate(cx, cy);
     if (icon === "drop") { x.fillStyle = "#e6f7ff"; x.beginPath(); x.moveTo(0, -62); x.quadraticCurveTo(52, 10, 0, 50); x.quadraticCurveTo(-52, 10, 0, -62); x.fill(); x.fillStyle = "#5aa9e6"; x.fillRect(-14, 0, 12, 12); }
     if (icon === "hands") { x.fillStyle = "#ffe1c2"; x.fillRect(-58, -40, 50, 80); x.fillRect(8, -40, 50, 80); x.fillStyle = "#ffffff"; [[-70, -50], [62, -30], [-30, 52], [40, 50], [0, -60]].forEach(p => { x.beginPath(); x.arc(p[0], p[1], 12, 0, 7); x.fill(); }); }
     if (icon === "apple") { x.fillStyle = "#e53935"; x.fillRect(-48, -36, 96, 84); x.fillRect(-38, -46, 76, 104); x.fillStyle = "#4fae4a"; x.fillRect(4, -72, 30, 18); x.fillStyle = "#7a4d31"; x.fillRect(-4, -66, 8, 22); }
     if (icon === "heart") { x.fillStyle = "#ff5a7a"; x.beginPath(); x.arc(-26, -18, 32, 0, 7); x.arc(26, -18, 32, 0, 7); x.fill(); x.beginPath(); x.moveTo(-57, -8); x.lineTo(57, -8); x.lineTo(0, 56); x.fill(); x.strokeStyle = "#ffffff"; x.lineWidth = 6; x.beginPath(); x.moveTo(-50, -4); x.lineTo(-20, -4); x.lineTo(-8, -26); x.lineTo(6, 18); x.lineTo(18, -4); x.lineTo(50, -4); x.stroke(); }
-    if (icon === "sleep") { x.fillStyle = "#ffe08a"; x.beginPath(); x.arc(0, 0, 50, 0, 7); x.fill(); x.fillStyle = bg; x.beginPath(); x.arc(22, -16, 44, 0, 7); x.fill(); x.fillStyle = "#ffffff"; x.font = "bold 30px Inter"; x.fillText("z z", 44, -40); }
+    if (icon === "sleep") { x.fillStyle = "#ffe08a"; x.beginPath(); x.arc(0, 0, 50, 0, 7); x.fill(); x.fillStyle = bg; x.beginPath(); x.arc(22, -16, 44, 0, 7); x.fill(); x.fillStyle = "#ffffff"; x.font = "bold 30px 'Pixelify Sans', sans-serif"; x.fillText("z z", 44, -40); }
     x.restore();
   };
 }
@@ -675,7 +677,7 @@ function drawClock() {
   box(0.4, 2.95, 0.14, "#ffffff", X, 1.47, -4.85, null, false); box(0.4, 2.95, 0.14, "#ffffff", X, 1.47, -3.15, null, false); box(0.4, 0.14, 1.84, "#ffffff", X, 2.9, -4, null, false);
   const leaf = group(null, X + 0.1, 0, -4.75); leaf.rotation.y = -1.25;
   box(1.5, 2.75, 0.08, "#7ab8f5", 0.75, 1.38, 0, leaf, false); box(0.5, 0.6, 0.09, "#cdeeff", 0.75, 2.0, 0, leaf, false); box(0.1, 0.1, 0.16, "#f7c531", 1.35, 1.3, 0, leaf, false);
-  const exitSign = canvasPlane(1.1, 0.34, (c, w, h) => { c.fillStyle = "#23946b"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 46px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("SAÍDA  ➜", w / 2, h / 2 + 2); }, 330, 100, { basic: true });
+  const exitSign = canvasPlane(1.1, 0.34, (c, w, h) => { c.fillStyle = "#23946b"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 46px 'Pixelify Sans', sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("SAÍDA  ➜", w / 2, h / 2 + 2); }, 330, 100, { basic: true });
   place(exitSign, X - 0.17, 3.3, -4, -Math.PI / 2);
   // windows, bunting, posters and the clock
   [-7.5, 0, 7.5].forEach(x => windowAt(x, 2.95, ZB, 0));
@@ -687,7 +689,7 @@ function drawClock() {
   const banner = canvasPlane(7.6, 0.95, (c, w, h) => {
     c.fillStyle = "#ffffff"; c.fillRect(0, 0, w, h); c.fillStyle = "#2f6fd0"; c.fillRect(6, 6, w - 12, h - 12);
     c.fillStyle = "#ffd45c"; c.fillRect(6, h - 22, w - 12, 16);
-    c.fillStyle = "#ffffff"; c.font = "bold 92px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("Enfermaria UFMT", w / 2, h / 2 - 4);
+    c.fillStyle = "#ffffff"; c.font = "bold 92px 'Pixelify Sans', sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("Enfermaria UFMT", w / 2, h / 2 - 4);
   }, 1120, 140, { basic: true });
   place(banner, 0, 4.33, ZB + 0.24, 0);
   poster(-X + 0.17, 3.0, 7.6, Math.PI / 2, "Café da manhã", "Comece o dia bem", "#ef6f6c", "apple");
@@ -793,7 +795,7 @@ function drawMonitor(t, recovered) {
   x.strokeStyle = "#35d07f"; x.lineWidth = 3; x.beginPath();
   for (let i = 0; i < w; i++) { const ph = ((i + t * 120) % 90) / 90; const v = ph > .45 && ph < .5 ? -38 : ph > .5 && ph < .55 ? 22 : 0; const y = 50 + v; i ? x.lineTo(i, y) : x.moveTo(i, y); }
   x.stroke();
-  x.font = "600 22px 'IBM Plex Mono', monospace";
+  x.font = "600 22px 'Pixelify Sans', monospace";
   x.fillStyle = "#35d07f"; x.fillText("FC  " + (recovered ? "84" : "118") + " bpm", 14, 122);
   x.fillStyle = "#5ac8fa"; x.fillText("SpO₂ 98 %", 14, 154);
   x.fillStyle = recovered ? "#35d07f" : "#ff5a52"; x.fillText("GLIC " + (recovered ? "92" : "48") + " mg/dL", 14, 190);
@@ -823,7 +825,7 @@ const COURT_X = 140;
   box(4, 6, 26, "#f6e3c4", 0, 3, 0, sch); box(5, 0.8, 27, "#c9614a", 0, 6.3, 0, sch);
   for (let i = -6; i <= 6; i++) { if (i === 1) continue; [1.8, 4.2].forEach(y => { box(0.1, 1.3, 1.3, "#9fd3f0", 2.02, y, i * 2, sch, false); box(0.2, 0.15, 1.5, "#ffffff", 2.05, y - 0.75, i * 2, sch, false); }); }
   box(0.12, 2.8, 2.0, "#4a3426", 2.03, 1.4, 2.3, sch, false); box(0.2, 0.2, 2.4, "#ffffff", 2.08, 2.9, 2.3, sch, false);
-  const sign = canvasPlane(2.6, 0.5, (c, w, h) => { c.fillStyle = "#e53935"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 44px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✚ ENFERMARIA", w / 2, h / 2 + 2); }, 400, 78, { basic: true });
+  const sign = canvasPlane(2.6, 0.5, (c, w, h) => { c.fillStyle = "#e53935"; c.fillRect(0, 0, w, h); c.fillStyle = "#fff"; c.font = "bold 44px 'Pixelify Sans', sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✚ ENFERMARIA", w / 2, h / 2 + 2); }, 400, 78, { basic: true });
   place(sign, 2.12, 3.45, 2.3, Math.PI / 2, sch);
   // trees, bushes, flowers, a bench with Pedro's backpack
   [[-6, -10, 1], [2, -10.5, 0.9], [9, -10, 1.1], [-4, 12, 1], [5, 12.5, 1.05], [12, 9, 0.9], [13, -6, 1]].forEach((t, k) => tree(cx + t[0], t[1], t[2], k % 2 === 0, k + 20));
@@ -838,7 +840,7 @@ const COURT_X = 140;
   box(4.9, 1.7, 0.2, "#ffffff", 0, 2.75, 0, us);
   const ufmt = canvasPlane(4.6, 1.45, (c, w, h) => {
     c.fillStyle = "#1f4f9c"; c.fillRect(0, 0, w, h); c.fillStyle = "#23946b"; c.fillRect(0, h - 26, w, 26);
-    c.fillStyle = "#ffffff"; c.font = "bold 150px Inter, sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("UFMT", w / 2, h / 2 - 10);
+    c.fillStyle = "#ffffff"; c.font = "bold 150px 'Pixelify Sans', sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("UFMT", w / 2, h / 2 - 10);
   }, 640, 200, { basic: true });
   place(ufmt, 0, 2.75, 0.11, 0, us);
   flowerBed(cx + 3.5, -6.8, 3.6, 0.6, 43);
@@ -858,10 +860,10 @@ function labelTex(l1, l2, bar, state) {
   x.fillStyle = state === "locked" ? "#eef1f4" : "#ffffff"; rr(x, 10, 10, 492, 124, 14); x.fill();
   x.fillStyle = bar; rr(x, 10, 10, 22, 124, 10); x.fill();
   x.textBaseline = "middle"; x.textAlign = "left";
-  x.fillStyle = state === "locked" ? "#8a94a6" : "#1b2333"; let fs = 36; x.font = fs + "px Silkscreen, monospace";
-  while (fs > 22 && x.measureText(l1).width > 430) { fs -= 2; x.font = fs + "px Silkscreen, monospace"; }
+  x.fillStyle = state === "locked" ? "#8a94a6" : "#1b2333"; let fs = 36; x.font = fs + "px 'Pixelify Sans', monospace";
+  while (fs > 22 && x.measureText(l1).width > 430) { fs -= 2; x.font = fs + "px 'Pixelify Sans', monospace"; }
   x.fillText(l1, 52, 56);
-  x.fillStyle = state === "done" ? "#13897d" : state === "locked" ? "#8a94a6" : "#5a6579"; x.font = "600 30px Inter, sans-serif"; x.fillText(l2, 52, 104);
+  x.fillStyle = state === "done" ? "#13897d" : state === "locked" ? "#8a94a6" : "#5a6579"; x.font = "600 30px 'Pixelify Sans', sans-serif"; x.fillText(l2, 52, 104);
   const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; return t;
 }
 function makeSprite(w = 2.2) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex("", "", "#ccc", "locked"), transparent: true })); s.scale.set(w, w * 150 / 512, 1); s.renderOrder = 5; return s; }
@@ -1164,14 +1166,23 @@ function buildGirl(o) {
   return c;
 }
 function bubbleTex(name, color) {
+  // colorful block letters "OBRIGADO!" with a dark 3D shadow, and the name on a small 3D plaque
   const cv = document.createElement("canvas"); cv.width = 512; cv.height = 250;
   const x = cv.getContext("2d");
-  x.fillStyle = "rgba(20,33,61,.18)"; rr(x, 12, 16, 488, 190, 26); x.fill();
-  x.fillStyle = "#ffffff"; rr(x, 8, 8, 488, 190, 26); x.fill();
-  x.beginPath(); x.moveTo(226, 196); x.lineTo(286, 196); x.lineTo(256, 244); x.closePath(); x.fill();
-  x.textAlign = "center"; x.textBaseline = "middle";
-  x.fillStyle = color; x.font = "bold 34px Inter, sans-serif"; x.fillText(name, 252, 50);
-  x.fillStyle = "#1b2333"; x.font = "bold 38px Inter, sans-serif"; x.fillText("Obrigado por", 252, 104); x.fillText("salvar o Pedro!", 252, 150);
+  const word = "OBRIGADO!", cols = ["#ff8fb1", "#ffd45c", "#8fe0b5", "#8fc8ff", "#c9a7f0"];
+  x.font = '50px "Press Start 2P", monospace'; x.textBaseline = "middle"; x.textAlign = "left";
+  const cw = x.measureText("O").width, w = cw * word.length, x0 = (512 - w) / 2, y = 80;
+  for (let k = 0; k < word.length; k++) {
+    const lx = x0 + k * cw;
+    x.fillStyle = "#3b2a40"; for (let d = 6; d >= 2; d -= 2) x.fillText(word[k], lx + d, y + d);
+    x.fillStyle = cols[k % cols.length]; x.fillText(word[k], lx, y);
+  }
+  x.font = '600 30px "Pixelify Sans", monospace'; x.textAlign = "center";
+  const nm = name.toUpperCase(), pw = x.measureText(nm).width + 40, px = 256 - pw / 2, py = 150, ph = 52;
+  const dark = "#" + new THREE.Color(color).multiplyScalar(0.62).getHexString();
+  x.fillStyle = dark; x.fillRect(px, py + 7, pw, ph);
+  x.fillStyle = color; x.fillRect(px, py, pw, ph);
+  x.fillStyle = "#ffffff"; x.fillText(nm, 256, py + ph / 2 + 2);
   const t = new THREE.CanvasTexture(cv); t.minFilter = THREE.LinearFilter; return t;
 }
 const team = (() => {
@@ -1191,6 +1202,8 @@ const team = (() => {
   let t0 = 0, on = false;
   function start() {
     S.mode = "thanks"; on = true; t0 = clock.elapsedTime;
+    const redraw = () => girls.forEach(g => { g.s.material.map.dispose(); g.s.material.map = bubbleTex(g.d.name, g.d.color); g.s.material.needsUpdate = true; });
+    try { document.fonts.load('40px "Press Start 2P"').then(redraw, redraw); } catch (e) { redraw(); }
     $("#hud").hidden = true; $("#objective").hidden = true; $("#joy").hidden = true; $("#helpline").hidden = true; $("#talk").hidden = true;
     player.g.visible = false;
     girls.forEach(g => { g.g.visible = true; g.s.visible = false; });
@@ -1200,7 +1213,7 @@ const team = (() => {
   function stop() { on = false; girls.forEach(g => g.g.visible = false); $("#thanks").hidden = true; pedroUp.g.position.set(-1.7, 0, 0.6); pedroUp.g.rotation.y = 0.6; }
   function step(dt, t) {
     const e = t - t0;
-    tmpV.set(0, 1.75, 7.2); tmpL.set(0, 1.45, 2.4); camPos.lerp(tmpV, 0.05); camLook.lerp(tmpL, 0.08);
+    tmpV.set(0, 1.75, camera.aspect < 1.2 ? 7.2 + (1.2 - camera.aspect) * 9 : 7.2); tmpL.set(0, 1.45, 2.4); camPos.lerp(tmpV, 0.05); camLook.lerp(tmpL, 0.08);
     girls.forEach((g, i) => {
       const r = g.rig, k = e - i * 0.45;
       if (k > 0 && !g.s.visible) { g.s.visible = true; sfx.talk(); }
@@ -1916,7 +1929,8 @@ function tick() {
 }
 
 /* ---------------- Boot ---------------- */
-const fontsReady = Promise.race([Promise.all([document.fonts.load("36px Silkscreen"), document.fonts.load("600 30px Inter"), document.fonts.load("600 22px 'IBM Plex Mono'")]).catch(() => {}), new Promise(r => setTimeout(r, 1800))]);
+const fontsReady = Promise.race([Promise.all([document.fonts.load("36px 'Pixelify Sans'"), document.fonts.load("600 30px 'Pixelify Sans'"), document.fonts.load("bold 40px 'Pixelify Sans'")]).catch(() => {}), new Promise(r => setTimeout(r, 2500))]);
+fontsReady.then(() => canvasPlanes.forEach(p => { try { const c = p.cv.getContext("2d"); c.clearRect(0, 0, p.cv.width, p.cv.height); p.draw(c, p.cv.width, p.cv.height); p.t.needsUpdate = true; } catch (e) {} }));
 fontsReady.then(() => { makePortraits(); refreshStations(); });
 refreshStations();
 initCaps();
